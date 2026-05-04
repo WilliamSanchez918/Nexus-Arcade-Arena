@@ -364,19 +364,28 @@ const avatarHelmetProfiles = Object.freeze({
 function HelmetModel({ helmetId, profile, primary, secondary, accent, visorGlow }) {
   const helmet = avatarHelmetProfiles[helmetId] || avatarHelmetProfiles.helmet_vector;
   const trimColor = helmet.trim === 'primary' ? primary : helmet.trim === 'accent' ? accent : secondary;
-  const shellScale = [0.92 * profile.headScale, 1.08 * profile.headScale, 0.78 * profile.headScale];
   const trimMaterialProps = { color: trimColor, emissive: trimColor, emissiveIntensity: 0.22, roughness: 0.3, metalness: 0.34 };
+  const shellMaterialProps = { color: helmet.shell, roughness: 0.28, metalness: 0.42 };
+  const visorMaterialProps = {
+    color: '#070b14',
+    emissive: visorGlow,
+    emissiveIntensity: 0.28,
+    metalness: 0.42,
+    roughness: 0.16,
+    transparent: true,
+    opacity: 0.92
+  };
 
   return (
     <group position={[0, 1.1, 0]}>
       {helmet.style === 'skate' || helmet.style === 'openface' ? (
         <>
-          <mesh position={[0, 0.1, -0.02]} scale={[0.98 * profile.headScale, 0.7 * profile.headScale, 0.82 * profile.headScale]}>
+          <mesh position={[0, 0.1, -0.02]} scale={[0.98 * profile.headScale, 0.68 * profile.headScale, 0.84 * profile.headScale]}>
             <sphereGeometry args={[0.36, 32, 18, 0, Math.PI * 2, 0, Math.PI * 0.68]} />
-            <meshStandardMaterial color={helmet.shell} roughness={0.32} metalness={0.38} />
+            <meshStandardMaterial {...shellMaterialProps} />
           </mesh>
-          <mesh position={[0, 0.02, 0.31]} scale={[1, 0.34, 1]}>
-            <boxGeometry args={[0.58, 0.08, 0.08]} />
+          <mesh position={[0, 0.03, 0.25]} scale={[1, 0.34, 1]}>
+            <boxGeometry args={[0.58, 0.07, 0.1]} />
             <meshStandardMaterial {...trimMaterialProps} />
           </mesh>
           {[-1, 1].map((side) => (
@@ -392,17 +401,16 @@ function HelmetModel({ helmetId, profile, primary, secondary, accent, visorGlow 
             </group>
           ))}
         </>
-      ) : (
-        <mesh scale={shellScale}>
-          <sphereGeometry args={[0.36, 32, 20]} />
-          <meshStandardMaterial color={helmet.shell} roughness={0.28} metalness={0.42} />
-        </mesh>
-      )}
+      ) : null}
 
       {helmet.style === 'racer' ? (
         <>
-          <mesh position={[0, 0.08, 0.31]} scale={[1, 0.52, 1]}>
-            <boxGeometry args={[0.54, 0.16, 0.06]} />
+          <mesh scale={[0.88 * profile.headScale, 1.03 * profile.headScale, 0.78 * profile.headScale]}>
+            <sphereGeometry args={[0.36, 32, 20]} />
+            <meshStandardMaterial {...shellMaterialProps} />
+          </mesh>
+          <mesh position={[0, 0.07, 0.24]} scale={[1, 0.52, 1]}>
+            <boxGeometry args={[0.56, 0.15, 0.1]} />
             <meshStandardMaterial color={visorGlow} emissive={visorGlow} emissiveIntensity={0.38} metalness={0.32} roughness={0.18} transparent opacity={0.82} />
           </mesh>
           <mesh position={[0, 0.25, 0.02]} rotation={[Math.PI / 2, 0, 0]}>
@@ -414,17 +422,21 @@ function HelmetModel({ helmetId, profile, primary, secondary, accent, visorGlow 
 
       {helmet.style === 'mtb' ? (
         <>
-          <mesh position={[0, 0.28, 0.28]} rotation={[-0.18, 0, 0]}>
-            <boxGeometry args={[0.62, 0.08, 0.36]} />
+          <mesh position={[0, 0.05, -0.02]} scale={[0.9 * profile.headScale, 0.98 * profile.headScale, 0.72 * profile.headScale]}>
+            <sphereGeometry args={[0.36, 32, 18]} />
+            <meshStandardMaterial {...shellMaterialProps} />
+          </mesh>
+          <mesh position={[0, 0.23, 0.21]} rotation={[-0.18, 0, 0]}>
+            <boxGeometry args={[0.64, 0.07, 0.3]} />
             <meshStandardMaterial {...trimMaterialProps} />
           </mesh>
-          <mesh position={[0, -0.22, 0.4]}>
-            <boxGeometry args={[0.5, 0.12, 0.12]} />
-            <meshStandardMaterial color={helmet.shell} roughness={0.28} metalness={0.48} />
+          <mesh position={[0, -0.22, 0.29]}>
+            <boxGeometry args={[0.5, 0.13, 0.18]} />
+            <meshStandardMaterial {...shellMaterialProps} />
           </mesh>
           {[-1, 1].map((side) => (
-            <mesh key={side} position={[side * 0.28, -0.08, 0.31]} rotation={[0, side * 0.24, side * 0.12]}>
-              <boxGeometry args={[0.08, 0.34, 0.1]} />
+            <mesh key={side} position={[side * 0.27, -0.08, 0.23]} rotation={[0, side * 0.22, side * 0.12]}>
+              <boxGeometry args={[0.08, 0.34, 0.14]} />
               <meshStandardMaterial {...trimMaterialProps} />
             </mesh>
           ))}
@@ -433,23 +445,39 @@ function HelmetModel({ helmetId, profile, primary, secondary, accent, visorGlow 
 
       {helmet.style === 'moto' || helmet.style === 'fullface' || helmet.style === 'tactical' ? (
         <>
-          <mesh position={[0, 0.04, 0.32]} scale={[1, helmet.style === 'tactical' ? 0.78 : 0.62, 1]}>
-            <boxGeometry args={[helmet.style === 'tactical' ? 0.62 : 0.54, helmet.style === 'tactical' ? 0.22 : 0.16, 0.07]} />
-            <meshStandardMaterial color={helmet.style === 'tactical' || helmet.style === 'fullface' ? '#080d16' : visorGlow} emissive={visorGlow} emissiveIntensity={0.36} metalness={0.38} roughness={0.16} transparent opacity={helmet.style === 'tactical' || helmet.style === 'fullface' ? 0.9 : 0.84} />
+          <mesh position={[0, 0.03, -0.03]} scale={[
+            helmet.style === 'tactical' ? 0.82 * profile.headScale : 0.9 * profile.headScale,
+            helmet.style === 'tactical' ? 0.94 * profile.headScale : 1.04 * profile.headScale,
+            helmet.style === 'tactical' ? 0.68 * profile.headScale : 0.82 * profile.headScale
+          ]}>
+            {helmet.style === 'tactical' ? <boxGeometry args={[0.64, 0.68, 0.52]} /> : <sphereGeometry args={[0.36, 32, 20]} />}
+            <meshStandardMaterial {...shellMaterialProps} />
           </mesh>
-          <mesh position={[0, -0.2, 0.36]}>
-            <boxGeometry args={[0.46, 0.2, 0.16]} />
-            <meshStandardMaterial color={helmet.shell} roughness={0.3} metalness={0.44} />
+          <mesh position={[0, 0.04, 0.25]} scale={[1, helmet.style === 'tactical' ? 0.78 : 0.62, 1]}>
+            <boxGeometry args={[helmet.style === 'tactical' ? 0.62 : 0.54, helmet.style === 'tactical' ? 0.22 : 0.16, 0.09]} />
+            <meshStandardMaterial {...visorMaterialProps} />
+          </mesh>
+          <mesh position={[0, -0.19, 0.28]}>
+            <boxGeometry args={[helmet.style === 'tactical' ? 0.52 : 0.46, 0.22, 0.2]} />
+            <meshStandardMaterial {...shellMaterialProps} />
           </mesh>
           {helmet.style === 'fullface' ? (
-            <mesh position={[0, 0.26, 0.24]} rotation={[-0.16, 0, 0]}>
-              <boxGeometry args={[0.34, 0.025, 0.08]} />
-              <meshStandardMaterial {...trimMaterialProps} />
-            </mesh>
+            <>
+              <mesh position={[0, 0.26, 0.18]} rotation={[-0.16, 0, 0]}>
+                <boxGeometry args={[0.42, 0.025, 0.16]} />
+                <meshStandardMaterial {...trimMaterialProps} />
+              </mesh>
+              {[-1, 1].map((side) => (
+                <mesh key={side} position={[side * 0.29, -0.08, 0.18]} rotation={[0, side * 0.18, 0]}>
+                  <boxGeometry args={[0.08, 0.34, 0.16]} />
+                  <meshStandardMaterial {...shellMaterialProps} />
+                </mesh>
+              ))}
+            </>
           ) : null}
           {helmet.style === 'tactical' ? [-1, 1].map((side) => (
-            <mesh key={side} position={[side * 0.29, -0.11, 0.24]} rotation={[0, side * 0.28, 0]}>
-              <boxGeometry args={[0.1, 0.3, 0.1]} />
+            <mesh key={side} position={[side * 0.28, -0.1, 0.18]} rotation={[0, side * 0.28, 0]}>
+              <boxGeometry args={[0.12, 0.32, 0.14]} />
               <meshStandardMaterial {...trimMaterialProps} />
             </mesh>
           )) : null}
@@ -458,31 +486,45 @@ function HelmetModel({ helmetId, profile, primary, secondary, accent, visorGlow 
 
       {helmet.style === 'pilot' ? (
         <>
-          <mesh position={[0, 0.32, -0.03]} scale={[0.5, 0.95, 0.36]}>
+          <mesh position={[0, 0.03, -0.02]} scale={[0.86 * profile.headScale, 1.08 * profile.headScale, 0.74 * profile.headScale]}>
+            <sphereGeometry args={[0.36, 32, 20]} />
+            <meshStandardMaterial {...shellMaterialProps} />
+          </mesh>
+          <mesh position={[0, 0.28, -0.03]} scale={[0.44, 0.76, 0.34]}>
             <coneGeometry args={[0.22, 0.5, 5]} />
             <meshStandardMaterial color="#0b0d16" emissive={accent} emissiveIntensity={0.26} roughness={0.42} />
           </mesh>
-          <mesh position={[0, 0.03, 0.32]} scale={[1, 0.62, 1]}>
-            <boxGeometry args={[0.56, 0.18, 0.06]} />
-            <meshStandardMaterial color={visorGlow} emissive={visorGlow} emissiveIntensity={0.36} transparent opacity={0.84} />
+          <mesh position={[0, 0.03, 0.24]} scale={[1, 0.62, 1]}>
+            <boxGeometry args={[0.56, 0.18, 0.09]} />
+            <meshStandardMaterial {...visorMaterialProps} />
           </mesh>
         </>
       ) : null}
 
       {helmet.style === 'football' ? (
         <>
-          <mesh position={[0, 0.1, 0.33]} scale={[1, 0.5, 1]}>
-            <boxGeometry args={[0.48, 0.13, 0.06]} />
+          <mesh position={[0, 0.02, -0.02]} scale={[0.94 * profile.headScale, 0.96 * profile.headScale, 0.78 * profile.headScale]}>
+            <sphereGeometry args={[0.36, 32, 20]} />
+            <meshStandardMaterial {...shellMaterialProps} />
+          </mesh>
+          {[-1, 1].map((side) => (
+            <mesh key={side} position={[side * 0.28, -0.02, 0.04]} rotation={[0, side * 0.16, 0]}>
+              <boxGeometry args={[0.11, 0.34, 0.16]} />
+              <meshStandardMaterial {...shellMaterialProps} />
+            </mesh>
+          ))}
+          <mesh position={[0, 0.08, 0.25]} scale={[1, 0.5, 1]}>
+            <boxGeometry args={[0.5, 0.13, 0.08]} />
             <meshStandardMaterial color="#050914" roughness={0.24} metalness={0.36} />
           </mesh>
           {[-0.15, 0, 0.15].map((x) => (
-            <mesh key={x} position={[x, -0.11, 0.42]}>
+            <mesh key={x} position={[x, -0.11, 0.32]}>
               <cylinderGeometry args={[0.012, 0.012, 0.36, 8]} />
               <meshStandardMaterial {...trimMaterialProps} />
             </mesh>
           ))}
           {[-0.02, -0.15, -0.27].map((y) => (
-            <mesh key={y} position={[0, y, 0.42]} rotation={[0, 0, Math.PI / 2]}>
+            <mesh key={y} position={[0, y, 0.32]} rotation={[0, 0, Math.PI / 2]}>
               <cylinderGeometry args={[0.012, 0.012, 0.62, 8]} />
               <meshStandardMaterial {...trimMaterialProps} />
             </mesh>
@@ -492,9 +534,13 @@ function HelmetModel({ helmetId, profile, primary, secondary, accent, visorGlow 
 
       {helmet.style === 'champion' ? (
         <>
-          <mesh position={[0, 0.04, 0.31]} scale={[1, 0.55, 1]}>
-            <boxGeometry args={[0.54, 0.16, 0.06]} />
-            <meshStandardMaterial color={visorGlow} emissive={visorGlow} emissiveIntensity={0.36} transparent opacity={0.84} />
+          <mesh scale={[0.9 * profile.headScale, 1.02 * profile.headScale, 0.76 * profile.headScale]}>
+            <sphereGeometry args={[0.36, 32, 20]} />
+            <meshStandardMaterial {...shellMaterialProps} />
+          </mesh>
+          <mesh position={[0, 0.04, 0.24]} scale={[1, 0.55, 1]}>
+            <boxGeometry args={[0.54, 0.16, 0.09]} />
+            <meshStandardMaterial {...visorMaterialProps} />
           </mesh>
           {[-0.2, 0, 0.2].map((x) => (
             <mesh key={x} position={[x, 0.36, 0]}>
@@ -878,42 +924,46 @@ function AvatarModel({ avatar = defaultAvatar }) {
       ) : null}
       {!hasHelmet && ['hair_laser_mullet', 'hair_classic_mullet', 'hair_feathered_mullet'].includes(visibleHairId) ? (
         <>
-          <mesh position={[0, 1.29, -0.04]} scale={[1.02, 0.42, 0.7]}>
+          <mesh position={[0, 1.28, -0.03]} scale={[1, 0.42, 0.68]}>
             <sphereGeometry args={[0.29, 20, 14]} />
             <meshStandardMaterial color={hairColor} emissive={visibleHairId === 'hair_laser_mullet' ? secondary : '#000000'} emissiveIntensity={visibleHairId === 'hair_laser_mullet' ? 0.18 : 0} roughness={0.5} />
           </mesh>
-          <mesh position={[0, 1.2, 0.19]} scale={[0.84, 0.3, 0.28]}>
-            <sphereGeometry args={[0.22, 16, 10]} />
+          <mesh position={[0, 1.16, -0.18]} scale={[0.9, 0.72, 0.5]}>
+            <sphereGeometry args={[0.25, 20, 12]} />
             <meshStandardMaterial color={hairColor} roughness={0.5} />
           </mesh>
           {[-0.22, 0.22].map((x) => (
-            <mesh key={x} position={[x, 1.08, -0.05]} rotation={[0, 0, x < 0 ? -0.18 : 0.18]}>
+            <mesh key={x} position={[x, 1.04, -0.12]} rotation={[0, 0, x < 0 ? -0.1 : 0.1]}>
               <capsuleGeometry args={[0.06, visibleHairId === 'hair_feathered_mullet' ? 0.38 : 0.28, 8, 10]} />
               <meshStandardMaterial color={hairColor} roughness={0.52} />
             </mesh>
           ))}
           {[0, 1, 2].map((row) => (
-            <mesh key={row} position={[0, 1.02 - row * 0.11, -0.27 - row * 0.015]} scale={[0.9 - row * 0.12, 0.82, 0.34]}>
-              <capsuleGeometry args={[0.13, visibleHairId === 'hair_feathered_mullet' ? 0.34 : 0.25, 8, 12]} />
+            <mesh key={row} position={[0, 0.98 - row * 0.1, -0.21 - row * 0.008]} scale={[0.9 - row * 0.12, 0.9, 0.32]}>
+              <capsuleGeometry args={[0.12, visibleHairId === 'hair_feathered_mullet' ? 0.32 : 0.24, 8, 12]} />
               <meshStandardMaterial color={hairColor} emissive={visibleHairId === 'hair_laser_mullet' ? secondary : '#000000'} emissiveIntensity={visibleHairId === 'hair_laser_mullet' ? 0.08 : 0} roughness={0.54} />
             </mesh>
           ))}
+          <mesh position={[0, 0.78, -0.16]} scale={[0.62, 0.72, 0.26]}>
+            <capsuleGeometry args={[0.1, visibleHairId === 'hair_feathered_mullet' ? 0.28 : 0.18, 8, 10]} />
+            <meshStandardMaterial color={hairColor} roughness={0.54} />
+          </mesh>
           {visibleHairId === 'hair_laser_mullet' ? (
             <>
               <mesh position={[-0.11, 1.32, 0.22]} rotation={[0, 0, -0.18]}>
                 <boxGeometry args={[0.1, 0.42, 0.05]} />
                 <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.44} />
               </mesh>
-              <mesh position={[0.12, 0.96, -0.33]} rotation={[0, 0, 0.12]}>
-                <boxGeometry args={[0.09, 0.34, 0.045]} />
+              <mesh position={[0.12, 0.92, -0.24]} rotation={[0, 0, 0.12]}>
+                <boxGeometry args={[0.08, 0.28, 0.045]} />
                 <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.36} />
               </mesh>
             </>
           ) : null}
           {visibleHairId === 'hair_feathered_mullet' ? (
             [-0.18, 0, 0.18].map((x) => (
-              <mesh key={x} position={[x, 0.97, -0.34]} rotation={[0.18, 0, x * 0.5]}>
-                <boxGeometry args={[0.13, 0.38, 0.045]} />
+              <mesh key={x} position={[x, 0.9, -0.24]} rotation={[0.12, 0, x * 0.36]}>
+                <boxGeometry args={[0.12, 0.28, 0.045]} />
                 <meshStandardMaterial color={hairColor} roughness={0.58} />
               </mesh>
             ))

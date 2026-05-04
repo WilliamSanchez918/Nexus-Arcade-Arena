@@ -9,6 +9,7 @@ import {
   createTwoFactorChallenge,
   verifyTwoFactorChallenge
 } from './twoFactorService.js';
+import { getSecurityRuntimeConfig } from './operatorConfigService.js';
 
 export async function startOperatorLogin({ operatorId, pin }) {
   const cleanOperatorId = String(operatorId || '').trim();
@@ -33,7 +34,8 @@ export async function verifyOperatorLogin({ challengeId, code }) {
     purpose: 'operator_login'
   });
   const operatorToken = `op_${randomToken(32)}`;
-  const expiresAt = new Date(Date.now() + config.operatorSessionTtlSeconds * 1000);
+  const runtimeConfig = await getSecurityRuntimeConfig();
+  const expiresAt = new Date(Date.now() + runtimeConfig.operatorSessionTtlSeconds * 1000);
   await OperatorSession.create({
     tokenHash: hashToken(operatorToken, config.passportTokenSecret),
     operatorId: challenge.subjectId,

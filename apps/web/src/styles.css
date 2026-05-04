@@ -100,6 +100,13 @@ input {
   grid-template-columns: 1.6fr 1fr;
 }
 
+.management-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
 .wide {
   grid-column: 1 / -1;
 }
@@ -425,6 +432,69 @@ input {
   font-weight: 800;
 }
 
+.config-panel {
+  display: grid;
+  gap: 22px;
+}
+
+.config-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.config-summary div {
+  border: 1px solid rgba(255, 212, 0, 0.34);
+  border-radius: 6px;
+  padding: 14px;
+  background: rgba(255, 212, 0, 0.055);
+}
+
+.config-summary strong,
+.config-summary span {
+  display: block;
+}
+
+.config-summary span {
+  color: #ffd400;
+  font-weight: 900;
+  margin-top: 4px;
+}
+
+.config-section {
+  border-top: 1px solid rgba(174, 184, 202, 0.18);
+  padding-top: 18px;
+}
+
+.config-section h3 {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.toggle-row {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.toggle-row input {
+  width: 20px;
+  min-height: 20px;
+}
+
+.muted-copy {
+  color: #aeb8ca;
+  line-height: 1.5;
+}
+
 .leaderboard,
 .event-list {
   list-style: none;
@@ -498,6 +568,8 @@ input {
   .avatar-editor,
   .client-form,
   .stat-grid,
+  .config-grid,
+  .config-summary,
   .builder-panel {
     grid-template-columns: 1fr;
   }

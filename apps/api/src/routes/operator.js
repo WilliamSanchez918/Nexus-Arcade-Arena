@@ -6,6 +6,10 @@ import {
   startOperatorLogin,
   verifyOperatorLogin
 } from '../services/operatorAuthService.js';
+import {
+  getOperatorConfig,
+  updateOperatorConfig
+} from '../services/operatorConfigService.js';
 
 export const operatorRouter = express.Router();
 
@@ -26,6 +30,22 @@ operatorRouter.post('/verify-2fa', async (req, res, next) => {
 });
 
 operatorRouter.use(requireOperatorSession);
+
+operatorRouter.get('/config', async (_req, res, next) => {
+  try {
+    res.json({ config: await getOperatorConfig() });
+  } catch (error) {
+    next(error);
+  }
+});
+
+operatorRouter.patch('/config', async (req, res, next) => {
+  try {
+    res.json({ config: await updateOperatorConfig(req.body, req.operator?.operatorId) });
+  } catch (error) {
+    next(error);
+  }
+});
 
 operatorRouter.get('/cabinets', async (_req, res, next) => {
   try {

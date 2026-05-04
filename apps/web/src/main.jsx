@@ -13,6 +13,7 @@ import {
   RefreshCcw,
   RotateCcw,
   Save,
+  Settings,
   ShieldCheck,
   Sparkles,
   Star,
@@ -631,10 +632,129 @@ function OperatorLoginForm({ onLogin }) {
   );
 }
 
+function secondsToMinutesLabel(seconds) {
+  return `${Math.round(Number(seconds || 0) / 60)} min`;
+}
+
+function OperatorConfigPanel({ configState }) {
+  const [draft, setDraft] = useState(null);
+  const [saveState, setSaveState] = useState('');
+
+  useEffect(() => {
+    if (configState.data?.config) {
+      setDraft(configState.data.config);
+    }
+  }, [configState.data]);
+
+  function updateDraft(section, field, value) {
+    setSaveState('');
+    setDraft((current) => ({
+      ...current,
+      [section]: {
+        ...(current?.[section] || {}),
+        [field]: value
+      }
+    }));
+  }
+
+  async function saveConfig(event) {
+    event.preventDefault();
+    setSaveState('Saving');
+    try {
+      const result = await api.updateOperatorConfig({
+        general: draft.general,
+        security: {
+          twoFactorTtlSeconds: Number(draft.security.twoFactorTtlSeconds),
+          twoFactorMaxAttempts: Number(draft.security.twoFactorMaxAttempts),
+          exposeDevTwoFactorCodes: Boolean(draft.security.exposeDevTwoFactorCodes),
+          operatorSessionTtlSeconds: Number(draft.security.operatorSessionTtlSeconds)
+        },
+        qr: {
+          qrTokenTtlSeconds: Number(draft.qr.qrTokenTtlSeconds)
+        },
+        oauth: draft.oauth
+      });
+      setDraft(result.config);
+      await configState.refresh();
+      setSaveState('Saved');
+    } catch (error) {
+      setSaveState(error.message);
+    }
+  }
+
+  if (configState.loading || !draft) {
+    return (
+      <div className="panel wide">
+        <h2><Settings size={22} /> Configuration</h2>
+        <p className="muted-copy">Loading operator configuration...</p>
+      </div>
+    );
+  }
+
+  return (
+    <form className="panel wide config-panel" onSubmit={saveConfig}>
+      <div className="panel-header">
+        <h2><Settings size={22} /> Configuration</h2>
+        <button className="icon-button" onClick={configState.refresh} title="Reload configuration" type="button"><RefreshCcw size={18} /></button>
+      </div>
+      <div className="config-summary">
+        <div><strong>Player 2FA</strong><span>Required</span></div>
+        <div><strong>Operator 2FA</strong><span>Required</span></div>
+        <div><strong>QR TTL</strong><span>{secondsToMinutesLabel(draft.qr.qrTokenTtlSeconds)}</span></div>
+        <div><strong>Operator session</strong><span>{secondsToMinutesLabel(draft.security.operatorSessionTtlSeconds)}</span></div>
+      </div>
+      <section className="config-section">
+        <h3>Site defaults</h3>
+        <div className="config-grid">
+          <label>Site ID <input value={draft.general.siteId} onChange={(event) => updateDraft('general', 'siteId', event.target.value)} /></label>
+          <label>Default cabinet <input value={draft.general.cabinetId} onChange={(event) => updateDraft('general', 'cabinetId', event.target.value)} /></label>
+          <label>App base URL <input value={draft.general.appBaseUrl} onChange={(event) => updateDraft('general', 'appBaseUrl', event.target.value)} /></label>
+          <label>API base URL <input value={draft.general.apiBaseUrl} onChange={(event) => updateDraft('general', 'apiBaseUrl', event.target.value)} /></label>
+        </div>
+      </section>
+      <section className="config-section">
+        <h3>Security policy</h3>
+        <div className="config-grid">
+          <label>2FA code TTL seconds <input min="60" max="1800" type="number" value={draft.security.twoFactorTtlSeconds} onChange={(event) => updateDraft('security', 'twoFactorTtlSeconds', event.target.value)} /></label>
+          <label>2FA max attempts <input min="1" max="10" type="number" value={draft.security.twoFactorMaxAttempts} onChange={(event) => updateDraft('security', 'twoFactorMaxAttempts', event.target.value)} /></label>
+          <label>Operator session seconds <input min="900" max="86400" type="number" value={draft.security.operatorSessionTtlSeconds} onChange={(event) => updateDraft('security', 'operatorSessionTtlSeconds', event.target.value)} /></label>
+          <label className="toggle-row">
+            <input checked={Boolean(draft.security.exposeDevTwoFactorCodes)} type="checkbox" onChange={(event) => updateDraft('security', 'exposeDevTwoFactorCodes', event.target.checked)} />
+            Show local dev 2FA codes
+          </label>
+        </div>
+        <p className="muted-copy">Player and operator 2FA are enforced by policy and cannot be disabled from this pilot console.</p>
+      </section>
+      <section className="config-section">
+        <h3>QR and integration</h3>
+        <div className="config-grid">
+          <label>QR token TTL seconds <input min="60" max="1800" type="number" value={draft.qr.qrTokenTtlSeconds} onChange={(event) => updateDraft('qr', 'qrTokenTtlSeconds', event.target.value)} /></label>
+          <label>OAuth issuer <input value={draft.oauth.issuer} onChange={(event) => updateDraft('oauth', 'issuer', event.target.value)} /></label>
+        </div>
+      </section>
+      {saveState ? <p className="client-secret">{saveState}</p> : null}
+      <button className="primary-button" type="submit">
+        <Save size={18} />
+        Save configuration
+      </button>
+    </form>
+  );
+}
+
 function OperatorWorkspace() {
   const cabinets = useAsyncData(() => api.getOperatorCabinets(), []);
   const events = useAsyncData(() => api.getPassportEvents(), []);
   const clients = useAsyncData(() => api.getAuthClients(), []);
+  const operatorConfig = useAsyncData(() => api.getOperatorConfig(), []);
+  const [activeView, setActiveView] = useState(() => {
+    if (window.location.pathname.includes('/operator/config')) {
+      return 'configuration';
+    }
+    if (window.location.pathname.includes('/operator/integrations')) {
+      return 'integrations';
+    }
+    return 'operations';
+  });
   const [clientName, setClientName] = useState('Demo Auth App');
   const [redirectUri, setRedirectUri] = useState('http://localhost:8080/oauth/callback');
   const [clientSecret, setClientSecret] = useState('');
@@ -656,62 +776,94 @@ function OperatorWorkspace() {
     await clients.refresh();
   }
 
+  function selectOperatorView(view) {
+    setActiveView(view);
+    const path = view === 'operations' ? '/operator/cabinets' : `/operator/${view}`;
+    window.history.replaceState({}, '', path);
+  }
+
   return (
     <Shell title="Operator Console">
+      <div className="management-tabs" role="tablist" aria-label="Operator console sections">
+        {[
+          ['operations', 'Operations', RadioTower],
+          ['configuration', 'Configuration', Settings],
+          ['integrations', 'Integrations', ShieldCheck]
+        ].map(([view, label, Icon]) => (
+          <button
+            className={activeView === view ? 'segmented active' : 'segmented'}
+            key={view}
+            onClick={() => selectOperatorView(view)}
+            type="button"
+          >
+            <Icon size={17} />
+            {label}
+          </button>
+        ))}
+      </div>
       <section className="operator-grid">
-        <div className="panel wide">
-          <div className="panel-header">
-            <h2><RadioTower size={22} /> Cabinets</h2>
-            <button className="icon-button" onClick={cabinets.refresh} title="Refresh" type="button"><RefreshCcw size={18} /></button>
+        {activeView === 'operations' ? (
+          <>
+            <div className="panel wide">
+              <div className="panel-header">
+                <h2><RadioTower size={22} /> Cabinets</h2>
+                <button className="icon-button" onClick={cabinets.refresh} title="Refresh" type="button"><RefreshCcw size={18} /></button>
+              </div>
+              <div className="cabinet-list">
+                {(cabinets.data?.cabinets || []).map((cabinet) => (
+                  <article className="cabinet-row" key={cabinet.cabinetId}>
+                    <div>
+                      <strong>{cabinet.cabinetId}</strong>
+                      <span>{cabinet.siteId} - {cabinet.status} - {cabinet.lastState || 'idle'}</span>
+                    </div>
+                    <div className="slot-actions">
+                      {['P1', 'P2'].map((slot) => (
+                        <button className="secondary-button" key={slot} onClick={() => resetSlot(cabinet.cabinetId, slot)} type="button">
+                          <RotateCcw size={16} /> {slot}
+                        </button>
+                      ))}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+            <div className="panel">
+              <h2>Passport events</h2>
+              <ul className="event-list">
+                {(events.data?.events || []).map((event) => (
+                  <li key={`${event.type}-${event.occurredAt}`}>
+                    <strong>{event.type}</strong>
+                    <span>{event.playerId || event.cabinetId || 'system'}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </>
+        ) : null}
+        {activeView === 'configuration' ? (
+          <OperatorConfigPanel configState={operatorConfig} />
+        ) : null}
+        {activeView === 'integrations' ? (
+          <div className="panel wide">
+            <h2>OAuth clients</h2>
+            <form className="client-form" onSubmit={createClient}>
+              <label>Name <input value={clientName} onChange={(event) => setClientName(event.target.value)} /></label>
+              <label>Redirect URI <input value={redirectUri} onChange={(event) => setRedirectUri(event.target.value)} /></label>
+              <button className="primary-button" type="submit">Register client</button>
+            </form>
+            {clientSecret ? <p className="client-secret">Secret: {clientSecret}</p> : null}
+            <div className="cabinet-list">
+              {(clients.data?.clients || []).map((client) => (
+                <article className="cabinet-row" key={client.clientId}>
+                  <div>
+                    <strong>{client.name}</strong>
+                    <span>{client.clientId} - {client.type} - {client.allowedScopes.join(' ')}</span>
+                  </div>
+                </article>
+              ))}
+            </div>
           </div>
-          <div className="cabinet-list">
-            {(cabinets.data?.cabinets || []).map((cabinet) => (
-              <article className="cabinet-row" key={cabinet.cabinetId}>
-                <div>
-                  <strong>{cabinet.cabinetId}</strong>
-                  <span>{cabinet.siteId} - {cabinet.status} - {cabinet.lastState || 'idle'}</span>
-                </div>
-                <div className="slot-actions">
-                  {['P1', 'P2'].map((slot) => (
-                    <button className="secondary-button" key={slot} onClick={() => resetSlot(cabinet.cabinetId, slot)} type="button">
-                      <RotateCcw size={16} /> {slot}
-                    </button>
-                  ))}
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
-        <div className="panel">
-          <h2>Passport events</h2>
-          <ul className="event-list">
-            {(events.data?.events || []).map((event) => (
-              <li key={`${event.type}-${event.occurredAt}`}>
-                <strong>{event.type}</strong>
-                <span>{event.playerId || event.cabinetId || 'system'}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-        <div className="panel wide">
-          <h2>OAuth clients</h2>
-          <form className="client-form" onSubmit={createClient}>
-            <label>Name <input value={clientName} onChange={(event) => setClientName(event.target.value)} /></label>
-            <label>Redirect URI <input value={redirectUri} onChange={(event) => setRedirectUri(event.target.value)} /></label>
-            <button className="primary-button" type="submit">Register client</button>
-          </form>
-          {clientSecret ? <p className="client-secret">Secret: {clientSecret}</p> : null}
-          <div className="cabinet-list">
-            {(clients.data?.clients || []).map((client) => (
-              <article className="cabinet-row" key={client.clientId}>
-                <div>
-                  <strong>{client.name}</strong>
-                  <span>{client.clientId} - {client.type} - {client.allowedScopes.join(' ')}</span>
-                </div>
-              </article>
-            ))}
-          </div>
-        </div>
+        ) : null}
       </section>
     </Shell>
   );
@@ -743,7 +895,7 @@ function App() {
   if (path.startsWith('/play/login/')) {
     return <PhoneLoginPage sessionId={path.split('/').pop()} />;
   }
-  if (path.startsWith('/operator/cabinets')) {
+  if (path.startsWith('/operator')) {
     return <OperatorPage />;
   }
   return <ProfilePage />;

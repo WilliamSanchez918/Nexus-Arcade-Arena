@@ -14,3 +14,4 @@ export { OAuthAuthorizationCode } from './oauthAuthorizationCode.js';
 export { OAuthAccessToken } from './oauthAccessToken.js';
 export { TwoFactorChallenge } from './twoFactorChallenge.js';
 export { OperatorSession } from './operatorSession.js';
+export { OperatorConfig } from './operatorConfig.js';

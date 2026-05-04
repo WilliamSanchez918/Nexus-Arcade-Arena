@@ -70,6 +70,23 @@ test('Player Passport pilot flow works against Mongo', async () => {
   assert.equal(operatorVerify.response.status, 200);
   const operatorHeaders = { 'x-operator-token': operatorVerify.body.operatorToken };
 
+  const currentConfig = await request('/api/operator/config', { headers: operatorHeaders });
+  assert.equal(currentConfig.response.status, 200);
+  assert.equal(currentConfig.body.config.security.playerTwoFactorRequired, true);
+
+  const updatedConfig = await request('/api/operator/config', {
+    method: 'PATCH',
+    headers: operatorHeaders,
+    body: JSON.stringify({
+      security: { twoFactorTtlSeconds: 120, twoFactorMaxAttempts: 3 },
+      qr: { qrTokenTtlSeconds: 120 },
+      general: { appBaseUrl: baseUrl }
+    })
+  });
+  assert.equal(updatedConfig.response.status, 200);
+  assert.equal(updatedConfig.body.config.security.operatorTwoFactorRequired, true);
+  assert.equal(updatedConfig.body.config.security.twoFactorMaxAttempts, 3);
+
   const catalog = await request('/api/player/avatar/catalog');
   assert.equal(catalog.response.status, 200);
   assert.ok(catalog.body.items.some((item) => item.cosmeticId === 'back_boost_pack'));
@@ -149,6 +166,8 @@ test('Player Passport pilot flow works against Mongo', async () => {
     body: JSON.stringify({ cabinetId: 'PREVIEW-CAB', siteId: 'HQ', desiredSlot: 'P1' })
   });
   assert.equal(pairing.response.status, 201, JSON.stringify(pairing.body));
+  const pairingTtlSeconds = (Date.parse(pairing.body.expiresAt) - Date.now()) / 1000;
+  assert.ok(pairingTtlSeconds <= 125);
   const pairingToken = new URL(pairing.body.qrUrl).searchParams.get('token');
   const claim = await request('/api/player/claim-cabinet-session', {
     method: 'POST',

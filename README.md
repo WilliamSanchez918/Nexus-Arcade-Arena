@@ -25,6 +25,8 @@ The API defaults to `http://localhost:3000`, the phone/operator web app to `http
 
 Local V1 logins require a 6-digit 2FA challenge. In development, `EXPOSE_DEV_2FA_CODES=true` returns the code in the API response/UI so the flow can be tested without email or SMS infrastructure. The default local operator credentials are `OPERATOR_ID=operator` and `OPERATOR_PIN=000000`; change them in `.env` for any shared environment.
 
+The operator console includes a protected Configuration view for site defaults, 2FA challenge policy, QR TTL, and OAuth issuer settings. These values are persisted in MongoDB and the API reads the relevant settings at runtime.
+
 ## Rush Run / Godot handoff
 
 Set `GODOT_RUSH_RUN_PATH` to the exported Rush Run executable. The Hub passes:

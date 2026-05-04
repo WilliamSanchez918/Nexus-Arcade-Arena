@@ -106,6 +106,15 @@ export const api = {
   getOperatorCabinets() {
     return request('/api/operator/cabinets');
   },
+  getOperatorConfig() {
+    return request('/api/operator/config');
+  },
+  updateOperatorConfig(payload) {
+    return request('/api/operator/config', {
+      method: 'PATCH',
+      body: JSON.stringify(payload)
+    });
+  },
   operatorLogin(payload) {
     return request('/api/operator/login', {
       method: 'POST',

@@ -10,6 +10,7 @@ import {
   randomToken,
   safeEqualHash
 } from './tokenService.js';
+import { getSecurityRuntimeConfig } from './operatorConfigService.js';
 
 export function generateTwoFactorCode() {
   return crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
@@ -48,8 +49,9 @@ export async function createTwoFactorChallenge({
     throw error;
   }
 
+  const runtimeConfig = await getSecurityRuntimeConfig();
   const code = generateTwoFactorCode();
-  const expiresAt = new Date(Date.now() + config.twoFactorTtlSeconds * 1000);
+  const expiresAt = new Date(Date.now() + runtimeConfig.twoFactorTtlSeconds * 1000);
   const delivery = maskDestination({ email, phone });
   const challenge = await TwoFactorChallenge.create({
     challengeId: `mfa_${randomToken(18)}`,
@@ -58,7 +60,7 @@ export async function createTwoFactorChallenge({
     subjectDisplayName,
     codeHash: hashToken(code, config.passportTokenSecret),
     delivery,
-    maxAttempts: config.twoFactorMaxAttempts,
+    maxAttempts: runtimeConfig.twoFactorMaxAttempts,
     expiresAt,
     metadata
   });
@@ -69,7 +71,7 @@ export async function createTwoFactorChallenge({
     purpose,
     delivery,
     expiresAt: expiresAt.toISOString(),
-    devCode: config.exposeDevTwoFactorCodes ? code : undefined
+    devCode: runtimeConfig.exposeDevTwoFactorCodes ? code : undefined
   };
   return TwoFactorChallengeResponseSchema.parse(response);
 }

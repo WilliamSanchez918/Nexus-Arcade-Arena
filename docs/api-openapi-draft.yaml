@@ -47,6 +47,21 @@ paths:
       responses:
         "200":
           description: Operator session ready
+  /api/operator/config:
+    get:
+      summary: Return protected pilot runtime configuration
+      security:
+        - OperatorSession: []
+      responses:
+        "200":
+          description: Operator configuration
+    patch:
+      summary: Update protected pilot runtime configuration
+      security:
+        - OperatorSession: []
+      responses:
+        "200":
+          description: Updated operator configuration
   /api/auth/clients:
     post:
       summary: Register an OAuth/auth client for Player Passport integration

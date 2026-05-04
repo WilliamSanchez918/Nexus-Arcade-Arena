@@ -8,6 +8,8 @@ export const config = {
   mongoUri: process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/nexus_arcade',
   appBaseUrl: process.env.APP_BASE_URL || 'http://localhost:5173',
   apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:3000',
+  cabinetId: process.env.CABINET_ID || 'NEXUS-CAB-001',
+  siteId: process.env.SITE_ID || 'COSTLEY-HQ',
   qrTokenTtlSeconds: Number(process.env.QR_TOKEN_TTL_SECONDS || 300),
   qrTokenHashPepper: process.env.QR_TOKEN_HASH_PEPPER || 'local-dev-pepper',
   gameCallbackSecret: process.env.GAME_CALLBACK_SECRET || 'local-dev-game-callback-secret',

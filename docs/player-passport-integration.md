@@ -37,6 +37,8 @@ Player Passport profile login and operator login are challenge-first flows in V1
 
 Operator console access uses `POST /api/operator/login` followed by `POST /api/operator/verify-2fa`. Operator sessions are required for `/api/operator/*` operational data and `/api/auth/clients` OAuth-client management. Local development can expose the 6-digit code in the response with `EXPOSE_DEV_2FA_CODES=true`; shared or production-like environments should disable that and connect an email/SMS/authenticator delivery adapter.
 
+Operator configuration lives behind the same operator 2FA session. `GET /api/operator/config` returns the active pilot settings and `PATCH /api/operator/config` updates site defaults, 2FA TTL/attempt policy, operator session length, QR token TTL, and OAuth issuer. The API keeps player 2FA, operator 2FA, and OAuth client management protection enabled regardless of configuration edits.
+
 ## Avatar service rule
 
 The `AvatarManifestSchema` is the persisted game-facing shape. It contains stable color masks, body morphology, equipped cosmetic IDs, pose, animation set, and add-on references. Games should consume the manifest as read-only input and map supported slots to their own render layer, sprite rig, or 3D rig.

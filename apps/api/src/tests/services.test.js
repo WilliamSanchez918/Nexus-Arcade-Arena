@@ -16,6 +16,7 @@ import {
   generateTwoFactorCode,
   maskDestination
 } from '../services/twoFactorService.js';
+import { defaultOperatorConfig } from '../services/operatorConfigService.js';
 
 test('token hashes compare safely', () => {
   const hash = hashToken('abc', 'pepper');
@@ -80,4 +81,12 @@ test('two-factor helpers generate six-digit codes and masked delivery hints', ()
     type: 'sms',
     destination: '***-0199'
   });
+});
+
+test('operator configuration defaults keep 2FA enforcement enabled', () => {
+  const defaults = defaultOperatorConfig();
+  assert.equal(defaults.security.playerTwoFactorRequired, true);
+  assert.equal(defaults.security.operatorTwoFactorRequired, true);
+  assert.equal(defaults.security.clientManagementRequiresOperator2fa, true);
+  assert.ok(defaults.qr.qrTokenTtlSeconds >= 60);
 });

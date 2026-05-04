@@ -8,6 +8,7 @@ import { config } from '../config.js';
 import { generatePairingCode, hashToken, randomToken, safeEqualHash } from './tokenService.js';
 import { toPublicPlayer } from './passportService.js';
 import { publishIntegrationEvent } from './integrationEventService.js';
+import { getQrRuntimeConfig } from './operatorConfigService.js';
 
 function buildQrUrl({ sessionId, token, appBaseUrl = config.appBaseUrl }) {
   const url = new URL(`/play/login/${sessionId}`, appBaseUrl);
@@ -24,9 +25,10 @@ function chooseAvailableSlot(cabinet, desiredSlot = 'auto') {
 }
 
 export async function createCabinetLoginSession({ cabinetId, siteId, desiredSlot = 'auto' }) {
+  const runtimeConfig = await getQrRuntimeConfig();
   const token = randomToken();
   const pairingCode = generatePairingCode();
-  const expiresAt = new Date(Date.now() + config.qrTokenTtlSeconds * 1000);
+  const expiresAt = new Date(Date.now() + runtimeConfig.qrTokenTtlSeconds * 1000);
 
   const session = await CabinetLoginSession.create({
     cabinetId,
@@ -43,7 +45,7 @@ export async function createCabinetLoginSession({ cabinetId, siteId, desiredSlot
     { upsert: true }
   );
 
-  const qrUrl = buildQrUrl({ sessionId: session._id, token });
+  const qrUrl = buildQrUrl({ sessionId: session._id, token, appBaseUrl: runtimeConfig.appBaseUrl });
   const qrDataUrl = await QRCode.toDataURL(qrUrl, { margin: 1, width: 512 });
 
   return {

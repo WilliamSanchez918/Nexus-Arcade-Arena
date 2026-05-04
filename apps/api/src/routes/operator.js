@@ -1,8 +1,31 @@
 import express from 'express';
 import { Cabinet } from '../models/index.js';
 import { listRecentIntegrationEvents } from '../services/integrationEventService.js';
+import {
+  requireOperatorSession,
+  startOperatorLogin,
+  verifyOperatorLogin
+} from '../services/operatorAuthService.js';
 
 export const operatorRouter = express.Router();
+
+operatorRouter.post('/login', async (req, res, next) => {
+  try {
+    res.status(202).json(await startOperatorLogin(req.body));
+  } catch (error) {
+    next(error);
+  }
+});
+
+operatorRouter.post('/verify-2fa', async (req, res, next) => {
+  try {
+    res.json(await verifyOperatorLogin(req.body));
+  } catch (error) {
+    next(error);
+  }
+});
+
+operatorRouter.use(requireOperatorSession);
 
 operatorRouter.get('/cabinets', async (_req, res, next) => {
   try {

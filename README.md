@@ -23,6 +23,8 @@ npm run dev
 
 The API defaults to `http://localhost:3000`, the phone/operator web app to `http://localhost:5173`, the Hub renderer to `http://localhost:5174`, and Rush Run to `http://localhost:5175`.
 
+Local V1 logins require a 6-digit 2FA challenge. In development, `EXPOSE_DEV_2FA_CODES=true` returns the code in the API response/UI so the flow can be tested without email or SMS infrastructure. The default local operator credentials are `OPERATOR_ID=operator` and `OPERATOR_PIN=000000`; change them in `.env` for any shared environment.
+
 ## Rush Run / Godot handoff
 
 Set `GODOT_RUSH_RUN_PATH` to the exported Rush Run executable. The Hub passes:

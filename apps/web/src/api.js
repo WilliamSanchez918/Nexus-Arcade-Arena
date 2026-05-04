@@ -1,5 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3000';
 const PLAYER_TOKEN_KEY = 'nexus.playerToken';
+const OPERATOR_TOKEN_KEY = 'nexus.operatorToken';
 
 export function getPlayerToken() {
   return window.localStorage.getItem(PLAYER_TOKEN_KEY);
@@ -11,6 +12,24 @@ export function setPlayerToken(token) {
   }
 }
 
+export function clearPlayerToken() {
+  window.localStorage.removeItem(PLAYER_TOKEN_KEY);
+}
+
+export function getOperatorToken() {
+  return window.localStorage.getItem(OPERATOR_TOKEN_KEY);
+}
+
+export function setOperatorToken(token) {
+  if (token) {
+    window.localStorage.setItem(OPERATOR_TOKEN_KEY, token);
+  }
+}
+
+export function clearOperatorToken() {
+  window.localStorage.removeItem(OPERATOR_TOKEN_KEY);
+}
+
 async function request(path, options = {}) {
   const headers = {
     'content-type': 'application/json',
@@ -19,6 +38,10 @@ async function request(path, options = {}) {
   const playerToken = getPlayerToken();
   if (playerToken) {
     headers['x-player-id'] = playerToken;
+  }
+  const operatorToken = getOperatorToken();
+  if (operatorToken) {
+    headers['x-operator-token'] = operatorToken;
   }
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...options,
@@ -34,6 +57,12 @@ async function request(path, options = {}) {
 export const api = {
   devLogin(payload) {
     return request('/api/player/dev-login', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+  verifyPlayerTwoFactor(payload) {
+    return request('/api/player/dev-login/verify-2fa', {
       method: 'POST',
       body: JSON.stringify(payload)
     });
@@ -76,6 +105,18 @@ export const api = {
   },
   getOperatorCabinets() {
     return request('/api/operator/cabinets');
+  },
+  operatorLogin(payload) {
+    return request('/api/operator/login', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+  verifyOperatorTwoFactor(payload) {
+    return request('/api/operator/verify-2fa', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
   },
   logoutPlayer(cabinetId, slot) {
     return request(`/api/arcade/cabinet/${cabinetId}/logout-player`, {

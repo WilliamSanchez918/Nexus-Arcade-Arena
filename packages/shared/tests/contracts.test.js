@@ -9,7 +9,8 @@ import {
   normalizeDisplayName,
   OAuthAuthorizeRequestSchema,
   PassportAuthClientSchema,
-  PlayerPassportIntegrationEventSchema
+  PlayerPassportIntegrationEventSchema,
+  TwoFactorChallengeResponseSchema
 } from '../src/index.js';
 import { signGameResult, verifyGameResultSignature } from '../src/crypto.js';
 
@@ -91,4 +92,18 @@ test('Passport OAuth client and authorize requests validate integration boundari
   });
 
   assert.equal(request.client_id, client.clientId);
+});
+
+test('2FA challenge responses expose delivery without issuing a login token', () => {
+  const challenge = TwoFactorChallengeResponseSchema.parse({
+    requiresTwoFactor: true,
+    challengeId: 'mfa_demo_challenge_123',
+    purpose: 'player_login',
+    delivery: { type: 'local', destination: 'local dev challenge' },
+    expiresAt: new Date().toISOString(),
+    devCode: '123456'
+  });
+
+  assert.equal(challenge.requiresTwoFactor, true);
+  assert.equal(challenge.devCode, '123456');
 });

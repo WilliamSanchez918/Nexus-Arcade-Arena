@@ -12,6 +12,10 @@ import {
   avatarCatalogItems,
   defaultEquippedFromAvatar
 } from '../services/avatarCatalogService.js';
+import {
+  generateTwoFactorCode,
+  maskDestination
+} from '../services/twoFactorService.js';
 
 test('token hashes compare safely', () => {
   const hash = hashToken('abc', 'pepper');
@@ -64,4 +68,16 @@ test('avatar catalog exposes starter equipment for game-safe manifests', () => {
   assert.equal(equipped.badge, 'badge_rookie');
   assert.equal(catalogIds.has(equipped.helmet), true);
   assert.equal(catalogIds.has('back_boost_pack'), true);
+});
+
+test('two-factor helpers generate six-digit codes and masked delivery hints', () => {
+  assert.match(generateTwoFactorCode(), /^\d{6}$/);
+  assert.deepEqual(maskDestination({ email: 'pilot@example.test' }), {
+    type: 'email',
+    destination: 'pi***@example.test'
+  });
+  assert.deepEqual(maskDestination({ phone: '(918) 555-0199' }), {
+    type: 'sms',
+    destination: '***-0199'
+  });
 });

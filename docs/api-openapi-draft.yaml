@@ -25,18 +25,40 @@ paths:
           description: Pairing status
   /api/player/dev-login:
     post:
-      summary: Create or load a V1 development Player Passport
+      summary: Create or load a V1 development Player Passport and start 2FA
       responses:
-        "201":
+        "202":
+          description: 2FA challenge created
+  /api/player/dev-login/verify-2fa:
+    post:
+      summary: Verify Player Passport 2FA challenge and return player token
+      responses:
+        "200":
           description: Player Passport ready
+  /api/operator/login:
+    post:
+      summary: Start operator 2FA challenge
+      responses:
+        "202":
+          description: Operator 2FA challenge created
+  /api/operator/verify-2fa:
+    post:
+      summary: Verify operator 2FA challenge and return operator session token
+      responses:
+        "200":
+          description: Operator session ready
   /api/auth/clients:
     post:
       summary: Register an OAuth/auth client for Player Passport integration
+      security:
+        - OperatorSession: []
       responses:
         "201":
           description: Client registered
     get:
       summary: List registered OAuth/auth clients
+      security:
+        - OperatorSession: []
       responses:
         "200":
           description: Client list
@@ -117,3 +139,9 @@ paths:
       responses:
         "200":
           description: Leaderboard entries
+components:
+  securitySchemes:
+    OperatorSession:
+      type: apiKey
+      in: header
+      name: x-operator-token

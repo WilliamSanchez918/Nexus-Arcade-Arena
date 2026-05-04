@@ -43,9 +43,32 @@ test('Player Passport pilot flow works against Mongo', async () => {
     method: 'POST',
     body: JSON.stringify({ displayName: 'Preview Pilot', email: 'pilot@example.test' })
   });
-  assert.equal(login.response.status, 201);
-  const playerId = login.body.playerToken;
+  assert.equal(login.response.status, 202);
+  assert.equal(login.body.requiresTwoFactor, true);
+  assert.ok(login.body.challengeId);
+
+  const verifiedLogin = await request('/api/player/dev-login/verify-2fa', {
+    method: 'POST',
+    body: JSON.stringify({ challengeId: login.body.challengeId, code: login.body.devCode })
+  });
+  assert.equal(verifiedLogin.response.status, 200);
+  const playerId = verifiedLogin.body.playerToken;
   assert.ok(playerId);
+
+  const operatorBlocked = await request('/api/operator/cabinets');
+  assert.equal(operatorBlocked.response.status, 401);
+
+  const operatorStart = await request('/api/operator/login', {
+    method: 'POST',
+    body: JSON.stringify({ operatorId: 'operator', pin: '000000' })
+  });
+  assert.equal(operatorStart.response.status, 202);
+  const operatorVerify = await request('/api/operator/verify-2fa', {
+    method: 'POST',
+    body: JSON.stringify({ challengeId: operatorStart.body.challengeId, code: operatorStart.body.devCode })
+  });
+  assert.equal(operatorVerify.response.status, 200);
+  const operatorHeaders = { 'x-operator-token': operatorVerify.body.operatorToken };
 
   const catalog = await request('/api/player/avatar/catalog');
   assert.equal(catalog.response.status, 200);
@@ -75,6 +98,7 @@ test('Player Passport pilot flow works against Mongo', async () => {
 
   const client = await request('/api/auth/clients', {
     method: 'POST',
+    headers: operatorHeaders,
     body: JSON.stringify({
       name: 'Preview Auth App',
       redirectUris: ['http://localhost:9999/callback'],

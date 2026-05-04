@@ -31,6 +31,12 @@ Primary external surfaces:
 
 Cabinet screens receive only public player data: player ID, display name, avatar manifest, level, and active slot/session state. Email, phone, password, and long-lived auth tokens are not displayed or stored by the Hub.
 
+## 2FA rule
+
+Player Passport profile login and operator login are challenge-first flows in V1. `POST /api/player/dev-login` creates or loads the dev profile and returns a short-lived 2FA challenge. `POST /api/player/dev-login/verify-2fa` consumes the challenge and returns the player token used by QR claim, profile, OAuth authorize, and game-session flows.
+
+Operator console access uses `POST /api/operator/login` followed by `POST /api/operator/verify-2fa`. Operator sessions are required for `/api/operator/*` operational data and `/api/auth/clients` OAuth-client management. Local development can expose the 6-digit code in the response with `EXPOSE_DEV_2FA_CODES=true`; shared or production-like environments should disable that and connect an email/SMS/authenticator delivery adapter.
+
 ## Avatar service rule
 
 The `AvatarManifestSchema` is the persisted game-facing shape. It contains stable color masks, body morphology, equipped cosmetic IDs, pose, animation set, and add-on references. Games should consume the manifest as read-only input and map supported slots to their own render layer, sprite rig, or 3D rig.

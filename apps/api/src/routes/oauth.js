@@ -7,6 +7,7 @@ import {
   registerOAuthClient
 } from '../services/oauthService.js';
 import { OAuthClient } from '../models/index.js';
+import { requireOperatorSession } from '../services/operatorAuthService.js';
 
 export const oauthRouter = express.Router();
 export const authClientRouter = express.Router();
@@ -41,6 +42,8 @@ oauthRouter.post('/introspect', async (req, res, next) => {
 oauthRouter.get('/metadata', (_req, res) => {
   res.json(oauthMetadata());
 });
+
+authClientRouter.use(requireOperatorSession);
 
 authClientRouter.post('/clients', async (req, res, next) => {
   try {

@@ -59,13 +59,21 @@ input {
   flex-wrap: wrap;
 }
 
-.topbar a {
+.topbar a,
+.nav-button {
   color: #f6f8ff;
   text-decoration: none;
   border: 1px solid rgba(0, 229, 255, 0.6);
   border-radius: 8px;
   padding: 10px 13px;
   background: rgba(18, 27, 45, 0.9);
+}
+
+.nav-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
 }
 
 .panel {
@@ -100,7 +108,8 @@ input {
   border-color: #ff2ed1;
 }
 
-.hero-panel svg {
+.hero-panel svg,
+.two-factor-card > svg {
   color: #ffd400;
 }
 
@@ -451,6 +460,28 @@ input {
 
 .error {
   color: #ff87df;
+}
+
+.two-factor-card {
+  border-color: #ffd400;
+}
+
+.two-factor-card p {
+  color: #aeb8ca;
+  line-height: 1.5;
+}
+
+.code-hint {
+  border: 1px solid rgba(255, 212, 0, 0.5);
+  border-radius: 6px;
+  padding: 12px;
+  color: #ffd400;
+  background: rgba(255, 212, 0, 0.08);
+}
+
+.code-hint strong {
+  color: #f6f8ff;
+  letter-spacing: 0.16em;
 }
 
 @media (max-width: 760px) {

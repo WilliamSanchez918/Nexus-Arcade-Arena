@@ -7,11 +7,13 @@ import {
   Box,
   Gamepad2,
   LogIn,
+  LogOut,
   Palette,
   RadioTower,
   RefreshCcw,
   RotateCcw,
   Save,
+  ShieldCheck,
   Sparkles,
   Star,
   Trophy,
@@ -22,7 +24,15 @@ import {
   defaultAvatar,
   normalizeDisplayName
 } from '../../../packages/shared/src/index.js';
-import { api, getPlayerToken, setPlayerToken } from './api.js';
+import {
+  api,
+  clearOperatorToken,
+  clearPlayerToken,
+  getOperatorToken,
+  getPlayerToken,
+  setOperatorToken,
+  setPlayerToken
+} from './api.js';
 import './styles.css';
 
 function useAsyncData(loader, dependencies = []) {
@@ -46,6 +56,15 @@ function useAsyncData(loader, dependencies = []) {
 }
 
 function Shell({ children, title = 'Nexus Player Passport' }) {
+  const hasPlayerToken = Boolean(getPlayerToken());
+  const hasOperatorToken = Boolean(getOperatorToken());
+
+  function signOut() {
+    clearPlayerToken();
+    clearOperatorToken();
+    window.location.reload();
+  }
+
   return (
     <main className="shell">
       <header className="topbar">
@@ -56,6 +75,12 @@ function Shell({ children, title = 'Nexus Player Passport' }) {
         <nav>
           <a href="/player/profile">Profile</a>
           <a href="/operator/cabinets">Operator</a>
+          {hasPlayerToken || hasOperatorToken ? (
+            <button className="nav-button" onClick={signOut} type="button">
+              <LogOut size={17} />
+              Sign out
+            </button>
+          ) : null}
         </nav>
       </header>
       {children}
@@ -78,6 +103,8 @@ function AvatarChip({ avatar = defaultAvatar, label, level }) {
 function LoginForm({ onLogin, compact = false }) {
   const [displayName, setDisplayName] = useState('');
   const [contact, setContact] = useState('');
+  const [challenge, setChallenge] = useState(null);
+  const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
 
@@ -92,6 +119,24 @@ function LoginForm({ onLogin, compact = false }) {
         email: contact.includes('@') ? contact : undefined,
         phone: contact && !contact.includes('@') ? contact : undefined
       });
+      setChallenge(result);
+      setCode(result.devCode || '');
+    } catch (loginError) {
+      setError(loginError.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function verify(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const result = await api.verifyPlayerTwoFactor({
+        challengeId: challenge.challengeId,
+        code
+      });
       setPlayerToken(result.playerToken);
       onLogin?.(result);
     } catch (loginError) {
@@ -99,6 +144,26 @@ function LoginForm({ onLogin, compact = false }) {
     } finally {
       setBusy(false);
     }
+  }
+
+  if (challenge) {
+    return (
+      <form className={compact ? 'panel compact-form two-factor-card' : 'panel two-factor-card'} onSubmit={verify}>
+        <ShieldCheck size={32} />
+        <h2>Verify sign-in</h2>
+        <p>Enter the 6-digit code for {challenge.delivery.destination}. This code expires at {new Date(challenge.expiresAt).toLocaleTimeString()}.</p>
+        {challenge.devCode ? <p className="code-hint">Local dev code: <strong>{challenge.devCode}</strong></p> : null}
+        <label>
+          2FA code
+          <input inputMode="numeric" maxLength="6" pattern="[0-9]{6}" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} />
+        </label>
+        {error ? <p className="error">{error}</p> : null}
+        <button className="primary-button" disabled={busy || code.length !== 6} type="submit">
+          <ShieldCheck size={18} />
+          {busy ? 'Verifying' : 'Verify and continue'}
+        </button>
+      </form>
+    );
   }
 
   return (
@@ -486,7 +551,87 @@ function ProfilePage() {
   );
 }
 
-function OperatorPage() {
+function OperatorLoginForm({ onLogin }) {
+  const [operatorId, setOperatorId] = useState('operator');
+  const [pin, setPin] = useState('');
+  const [challenge, setChallenge] = useState(null);
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function start(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const result = await api.operatorLogin({ operatorId, pin });
+      setChallenge(result);
+      setCode(result.devCode || '');
+    } catch (loginError) {
+      setError(loginError.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function verify(event) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+    try {
+      const result = await api.verifyOperatorTwoFactor({
+        challengeId: challenge.challengeId,
+        code
+      });
+      setOperatorToken(result.operatorToken);
+      onLogin?.(result);
+    } catch (loginError) {
+      setError(loginError.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (challenge) {
+    return (
+      <form className="panel two-factor-card" onSubmit={verify}>
+        <ShieldCheck size={32} />
+        <h2>Operator 2FA</h2>
+        <p>Operator tools require a verified session. Enter the 6-digit code for {challenge.delivery.destination}.</p>
+        {challenge.devCode ? <p className="code-hint">Local dev code: <strong>{challenge.devCode}</strong></p> : null}
+        <label>
+          2FA code
+          <input inputMode="numeric" maxLength="6" pattern="[0-9]{6}" value={code} onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))} />
+        </label>
+        {error ? <p className="error">{error}</p> : null}
+        <button className="primary-button" disabled={busy || code.length !== 6} type="submit">
+          <ShieldCheck size={18} />
+          {busy ? 'Verifying' : 'Verify operator'}
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <form className="panel" onSubmit={start}>
+      <label>
+        Operator ID
+        <input value={operatorId} onChange={(event) => setOperatorId(event.target.value)} />
+      </label>
+      <label>
+        Operator PIN
+        <input type="password" value={pin} onChange={(event) => setPin(event.target.value)} />
+      </label>
+      {error ? <p className="error">{error}</p> : null}
+      <button className="primary-button" disabled={busy || !operatorId || !pin} type="submit">
+        <LogIn size={18} />
+        {busy ? 'Checking' : 'Continue'}
+      </button>
+    </form>
+  );
+}
+
+function OperatorWorkspace() {
   const cabinets = useAsyncData(() => api.getOperatorCabinets(), []);
   const events = useAsyncData(() => api.getPassportEvents(), []);
   const clients = useAsyncData(() => api.getAuthClients(), []);
@@ -570,6 +715,27 @@ function OperatorPage() {
       </section>
     </Shell>
   );
+}
+
+function OperatorPage() {
+  const [operatorReady, setOperatorReady] = useState(Boolean(getOperatorToken()));
+
+  if (!operatorReady) {
+    return (
+      <Shell title="Operator Login">
+        <section className="login-layout">
+          <div className="panel hero-panel">
+            <ShieldCheck size={34} />
+            <h2>Operator access</h2>
+            <p>Cabinet operations, Passport events, and auth-client management require an operator session with 2FA.</p>
+          </div>
+          <OperatorLoginForm onLogin={() => setOperatorReady(true)} />
+        </section>
+      </Shell>
+    );
+  }
+
+  return <OperatorWorkspace />;
 }
 
 function App() {

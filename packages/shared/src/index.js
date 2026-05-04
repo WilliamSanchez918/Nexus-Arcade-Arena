@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const PLAYER_SLOTS = ['P1', 'P2'];
 export const GAME_MODES = ['solo', 'versus', 'co-op', 'guest'];
 export const QR_LOGIN_STATUSES = ['pending', 'claimed', 'expired', 'cancelled'];
+export const TWO_FACTOR_PURPOSES = ['player_login', 'operator_login'];
 export const AVATAR_BODY_TYPES = ['runner', 'android', 'sprite', 'guardian'];
 export const AVATAR_EQUIPMENT_SLOTS = [
   'body',
@@ -273,6 +274,18 @@ export const TokenIntrospectionResponseSchema = z.object({
   scope: z.string().optional(),
   exp: z.number().optional(),
   passport_profile: PublicPlayerSchema.optional()
+});
+
+export const TwoFactorChallengeResponseSchema = z.object({
+  requiresTwoFactor: z.literal(true),
+  challengeId: z.string().min(12),
+  purpose: z.enum(TWO_FACTOR_PURPOSES),
+  delivery: z.object({
+    type: z.enum(['email', 'sms', 'local']),
+    destination: z.string()
+  }),
+  expiresAt: z.string().datetime(),
+  devCode: z.string().regex(/^\d{6}$/).optional()
 });
 
 export function normalizeDisplayName(displayName) {

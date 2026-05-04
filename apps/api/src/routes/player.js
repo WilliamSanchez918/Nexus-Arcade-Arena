@@ -12,6 +12,10 @@ import {
   getAvatarCatalog,
   getPlayerAvatarInventory
 } from '../services/avatarCatalogService.js';
+import {
+  createTwoFactorChallenge,
+  verifyTwoFactorChallenge
+} from '../services/twoFactorService.js';
 
 export const playerRouter = express.Router();
 
@@ -22,12 +26,34 @@ function getPlayerId(req) {
 playerRouter.post('/dev-login', async (req, res, next) => {
   try {
     const profile = await findOrCreateDevProfile(req.body);
-    publishIntegrationEvent(req.app.locals.io, {
-      type: 'player.created',
-      playerId: String(profile._id),
-      payload: { displayName: profile.displayName }
+    const challenge = await createTwoFactorChallenge({
+      purpose: 'player_login',
+      subjectId: profile._id,
+      subjectDisplayName: profile.displayName,
+      email: req.body.email,
+      phone: req.body.phone,
+      metadata: { displayName: profile.displayName }
     });
-    res.status(201).json({
+    res.status(202).json(challenge);
+  } catch (error) {
+    next(error);
+  }
+});
+
+playerRouter.post('/dev-login/verify-2fa', async (req, res, next) => {
+  try {
+    const challenge = await verifyTwoFactorChallenge({
+      challengeId: req.body.challengeId,
+      code: req.body.code,
+      purpose: 'player_login'
+    });
+    const profile = await getPlayerProfile(challenge.subjectId);
+    publishIntegrationEvent(req.app.locals.io, {
+      type: 'player.updated',
+      playerId: String(profile._id),
+      payload: { displayName: profile.displayName, twoFactorVerified: true }
+    });
+    res.json({
       playerToken: String(profile._id),
       ...redactPlayerProfile(profile)
     });

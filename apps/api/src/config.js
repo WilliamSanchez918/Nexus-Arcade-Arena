@@ -12,5 +12,11 @@ export const config = {
   qrTokenHashPepper: process.env.QR_TOKEN_HASH_PEPPER || 'local-dev-pepper',
   gameCallbackSecret: process.env.GAME_CALLBACK_SECRET || 'local-dev-game-callback-secret',
   passportTokenSecret: process.env.PASSPORT_TOKEN_SECRET || 'local-dev-passport-token-secret',
-  oauthIssuer: process.env.OAUTH_ISSUER || process.env.API_BASE_URL || 'http://localhost:3000'
+  oauthIssuer: process.env.OAUTH_ISSUER || process.env.API_BASE_URL || 'http://localhost:3000',
+  twoFactorTtlSeconds: Number(process.env.TWO_FACTOR_TTL_SECONDS || 300),
+  twoFactorMaxAttempts: Number(process.env.TWO_FACTOR_MAX_ATTEMPTS || 5),
+  exposeDevTwoFactorCodes: process.env.EXPOSE_DEV_2FA_CODES !== 'false',
+  operatorId: process.env.OPERATOR_ID || 'operator',
+  operatorPin: process.env.OPERATOR_PIN || '000000',
+  operatorSessionTtlSeconds: Number(process.env.OPERATOR_SESSION_TTL_SECONDS || 28800)
 };

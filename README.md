@@ -2,6 +2,10 @@
 
 Fresh scaffold for Nexus Arcade Hub and Nexus Player Passport.
 
+## Preview
+
+![Nexus Player Passport avatar builder](docs/screenshots/avatar-builder.png)
+
 ## What is included
 
 - `apps/api` - Express, MongoDB/Mongoose, Socket.IO, Player Passport APIs.

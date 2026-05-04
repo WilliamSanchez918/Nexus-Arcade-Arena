@@ -1,0 +1,11 @@
+{
+  "name": "nexus-arcade-game-simulator",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": {
+    "nexus-game-simulator": "index.js"
+  },
+  "dependencies": {
+    "nexus-arcade-shared": "0.1.0"
+  }
+}

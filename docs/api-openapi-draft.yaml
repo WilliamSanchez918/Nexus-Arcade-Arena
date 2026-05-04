@@ -1,0 +1,89 @@
+openapi: 3.1.0
+info:
+  title: Nexus Arcade Hub and Player Passport API
+  version: 0.1.0
+  description: Pilot V1 API for cabinet QR login, player profiles, game sessions, progression, and leaderboards.
+servers:
+  - url: http://localhost:3000
+paths:
+  /api/arcade/cabinet-login:
+    post:
+      summary: Create a cabinet QR pairing session
+      responses:
+        "201":
+          description: Pairing session created
+  /api/arcade/cabinet-login/{sessionId}/status:
+    get:
+      summary: Poll QR pairing status
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Pairing status
+  /api/player/dev-login:
+    post:
+      summary: Create or load a V1 development Player Passport
+      responses:
+        "201":
+          description: Player Passport ready
+  /api/auth/clients:
+    post:
+      summary: Register an OAuth/auth client for Player Passport integration
+      responses:
+        "201":
+          description: Client registered
+    get:
+      summary: List registered OAuth/auth clients
+      responses:
+        "200":
+          description: Client list
+  /oauth/authorize:
+    get:
+      summary: Issue an authorization code for an authenticated Player Passport
+      responses:
+        "302":
+          description: Redirects to client callback with code
+  /oauth/token:
+    post:
+      summary: Exchange an authorization code for a short-lived Passport access token
+      responses:
+        "200":
+          description: Token response
+  /oauth/introspect:
+    post:
+      summary: Introspect a Passport access token
+      responses:
+        "200":
+          description: Token activity and public Player Passport profile
+  /api/player/claim-cabinet-session:
+    post:
+      summary: Claim a cabinet QR session for a Player Passport
+      responses:
+        "200":
+          description: Player assigned to cabinet slot
+  /api/arcade/game-session/start:
+    post:
+      summary: Start a tracked game session and return launch payload
+      responses:
+        "201":
+          description: Game session started
+  /api/arcade/game-session/end:
+    post:
+      summary: Persist signed game result, XP, achievements, and leaderboards
+      responses:
+        "200":
+          description: Game result saved
+  /api/leaderboards/{gameId}:
+    get:
+      summary: List leaderboard entries for a game
+      parameters:
+        - in: path
+          name: gameId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Leaderboard entries

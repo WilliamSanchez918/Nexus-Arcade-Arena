@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.vite/
+.env
+.env.local
+nexus-data/
+*.log
+*.pid
+*.tmp
+*.bak
+.runtime/
+apps/hub/.runtime/

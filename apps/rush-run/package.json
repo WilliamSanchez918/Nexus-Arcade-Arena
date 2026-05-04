@@ -1,0 +1,13 @@
+{
+  "name": "nexus-arcade-rush-run",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1 --port 5175",
+    "build": "vite build",
+    "test": "node --test src/*.test.js"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  }
+}

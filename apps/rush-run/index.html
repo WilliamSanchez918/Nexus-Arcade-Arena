@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rush Run</title>
+  </head>
+  <body>
+    <div id="hud">
+      <div>
+        <strong>Rush Run</strong>
+        <span id="player-label">Guest Runner</span>
+      </div>
+      <div class="hud-stats">
+        <span id="score">0</span>
+        <span id="timer">60</span>
+      </div>
+    </div>
+    <div id="game-root"></div>
+    <div id="result-panel" hidden>
+      <h1>Run Complete</h1>
+      <p id="result-copy">Submitting score...</p>
+      <button id="restart-button" type="button">Run again</button>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

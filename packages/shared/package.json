@@ -1,0 +1,16 @@
+{
+  "name": "nexus-arcade-shared",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./crypto": "./src/crypto.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  }
+}

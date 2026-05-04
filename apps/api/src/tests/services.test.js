@@ -74,8 +74,14 @@ test('avatar catalog exposes starter equipment for game-safe manifests', () => {
   assert.equal(catalogIds.has('body_street_legend'), true);
   assert.equal(catalogIds.has('hair_midnight_curls'), true);
   assert.equal(catalogIds.has('hair_classic_mullet'), true);
+  assert.equal(catalogIds.has('hair_feathered_mullet'), true);
   assert.equal(catalogIds.has('hair_side_part'), true);
   assert.equal(catalogIds.has('helmet_vector'), true);
+  assert.equal(catalogIds.has('helmet_mtb_fullface'), true);
+  assert.equal(catalogIds.has('helmet_skate_shell'), true);
+  assert.equal(catalogIds.has('helmet_moto_fullface'), true);
+  assert.equal(catalogIds.has('helmet_football_cage'), true);
+  assert.equal(catalogIds.has('helmet_tactical_visor'), true);
   assert.equal(catalogIds.has('frame_vector_vip'), true);
   assert.equal(catalogIds.has('boots_hover_soles'), true);
 });

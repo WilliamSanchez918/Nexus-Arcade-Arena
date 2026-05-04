@@ -242,6 +242,19 @@ export const avatarCatalogItems = Object.freeze([
     sortOrder: 48
   },
   {
+    cosmeticId: 'hair_feathered_mullet',
+    type: 'hair',
+    slot: 'hair',
+    title: 'Feathered Mullet',
+    description: 'Layered 80s feathered hair with longer neck coverage.',
+    rarity: 'common',
+    colorMasks: ['accent'],
+    asset2d: { layer: 'feathered-mullet' },
+    asset3d: { primitive: 'layered-mullet' },
+    preview: { swatch: '#5b3525' },
+    sortOrder: 48
+  },
+  {
     cosmeticId: 'hair_midnight_curls',
     type: 'hair',
     slot: 'hair',
@@ -291,6 +304,32 @@ export const avatarCatalogItems = Object.freeze([
     sortOrder: 52
   },
   {
+    cosmeticId: 'helmet_mtb_fullface',
+    type: 'helmet',
+    slot: 'helmet',
+    title: 'Full-Face MTB Helmet',
+    description: 'Downhill bike helmet with top peak and open chin guard.',
+    rarity: 'common',
+    colorMasks: ['primary', 'accent'],
+    asset2d: { layer: 'mtb-full-face-helmet' },
+    asset3d: { primitive: 'mtb-full-face' },
+    preview: { swatch: '#25FF9A' },
+    sortOrder: 53
+  },
+  {
+    cosmeticId: 'helmet_skate_shell',
+    type: 'helmet',
+    slot: 'helmet',
+    title: 'Skate Shell Helmet',
+    description: 'Rounded low-profile skate helmet with chin straps.',
+    rarity: 'common',
+    colorMasks: ['primary', 'secondary'],
+    asset2d: { layer: 'skate-shell-helmet' },
+    asset3d: { primitive: 'skate-shell' },
+    preview: { swatch: '#111827' },
+    sortOrder: 53
+  },
+  {
     cosmeticId: 'helmet_bandana_laser',
     type: 'helmet',
     slot: 'helmet',
@@ -304,6 +343,19 @@ export const avatarCatalogItems = Object.freeze([
     sortOrder: 54
   },
   {
+    cosmeticId: 'helmet_moto_fullface',
+    type: 'helmet',
+    slot: 'helmet',
+    title: 'Full-Face Moto Helmet',
+    description: 'Street-racing full helmet with chin guard and dark visor.',
+    rarity: 'common',
+    colorMasks: ['secondary', 'accent'],
+    asset2d: { layer: 'full-face-moto-helmet' },
+    asset3d: { primitive: 'full-face-moto' },
+    preview: { swatch: '#FF2ED1' },
+    sortOrder: 55
+  },
+  {
     cosmeticId: 'helmet_viper_hair',
     type: 'helmet',
     slot: 'helmet',
@@ -315,6 +367,45 @@ export const avatarCatalogItems = Object.freeze([
     asset3d: { primitive: 'full-pilot-helmet' },
     preview: { swatch: '#00E5FF' },
     sortOrder: 56
+  },
+  {
+    cosmeticId: 'helmet_football_cage',
+    type: 'helmet',
+    slot: 'helmet',
+    title: 'Gridiron Cage Helmet',
+    description: 'Football-style helmet with a protective neon face cage.',
+    rarity: 'common',
+    colorMasks: ['primary', 'accent'],
+    asset2d: { layer: 'football-cage-helmet' },
+    asset3d: { primitive: 'football-cage' },
+    preview: { swatch: '#00E5FF' },
+    sortOrder: 57
+  },
+  {
+    cosmeticId: 'helmet_tactical_visor',
+    type: 'helmet',
+    slot: 'helmet',
+    title: 'Tactical Visor Helmet',
+    description: 'Dual-sport tactical helmet with broad shield and cheek plates.',
+    rarity: 'rare',
+    colorMasks: ['secondary'],
+    asset2d: { layer: 'tactical-visor-helmet' },
+    asset3d: { primitive: 'tactical-visor' },
+    preview: { swatch: '#8B2CFF' },
+    sortOrder: 58
+  },
+  {
+    cosmeticId: 'helmet_open_face_rider',
+    type: 'helmet',
+    slot: 'helmet',
+    title: 'Open-Face Rider Helmet',
+    description: 'Retro open-face rider helmet with brim and chin strap.',
+    rarity: 'common',
+    colorMasks: ['accent'],
+    asset2d: { layer: 'open-face-rider-helmet' },
+    asset3d: { primitive: 'open-face-rider' },
+    preview: { swatch: '#FFD400' },
+    sortOrder: 59
   },
   {
     cosmeticId: 'helmet_champion_crown',

@@ -1,13 +1,85 @@
+# Dependencies
 node_modules/
+
+# Build output and generated assets
 dist/
+build/
 coverage/
 .vite/
+.cache/
+.parcel-cache/
+out/
+release/
+releases/
+artifacts/
+generated/
+
+# Local environment and secrets
 .env
-.env.local
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+
+# Runtime state, logs, and temp files
 nexus-data/
+.runtime/
+apps/hub/.runtime/
 *.log
 *.pid
 *.tmp
+*.temp
 *.bak
-.runtime/
-apps/hub/.runtime/
+*.swp
+*.swo
+
+# Local databases, dumps, and queues
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.bson
+*.archive
+*.jsonl
+mongo-data/
+docker-data/
+
+# Godot/editor imports and exported game binaries
+.godot/
+*.import
+export_presets.cfg
+*.exe
+*.app/
+*.dmg
+*.AppImage
+*.x86_64
+*.pck
+*.wasm
+
+# Large media and packaged artifacts should live in release storage, not Git
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.webm
+*.wav
+*.mp3
+*.flac
+*.psd
+*.ai
+
+# OS/editor noise
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/

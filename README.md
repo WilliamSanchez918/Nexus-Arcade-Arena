@@ -44,3 +44,17 @@ OAuth-style endpoints:
 - `GET /oauth/authorize`
 - `POST /oauth/token`
 - `POST /oauth/introspect`
+
+## Repository hygiene
+
+Keep source, contracts, tests, docs, and small hand-authored assets in Git. Do not commit generated builds, runtime queues, local databases, Godot exports, installers, archives, videos, audio, or large raw art files.
+
+Before committing:
+
+```powershell
+npm test
+npm run build
+git status --short
+```
+
+Large release artifacts should be attached to GitHub Releases or stored in external asset storage. If a binary asset must become part of the source tree, add a short note explaining why and keep it small enough for normal clone/pull workflows.

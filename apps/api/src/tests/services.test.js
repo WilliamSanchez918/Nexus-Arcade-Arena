@@ -65,10 +65,12 @@ test('avatar catalog exposes starter equipment for game-safe manifests', () => {
   const equipped = defaultEquippedFromAvatar();
   const catalogIds = new Set(avatarCatalogItems.map((item) => item.cosmeticId));
 
-  assert.equal(equipped.body, 'body_runner_core');
+  assert.equal(equipped.body, 'body_neon_hero');
   assert.equal(equipped.badge, 'badge_rookie');
   assert.equal(catalogIds.has(equipped.helmet), true);
   assert.equal(catalogIds.has('back_boost_pack'), true);
+  assert.equal(catalogIds.has('body_street_legend'), true);
+  assert.equal(catalogIds.has('helmet_mohawk_glow'), true);
 });
 
 test('two-factor helpers generate six-digit codes and masked delivery hints', () => {

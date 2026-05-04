@@ -4,7 +4,7 @@ export const PLAYER_SLOTS = ['P1', 'P2'];
 export const GAME_MODES = ['solo', 'versus', 'co-op', 'guest'];
 export const QR_LOGIN_STATUSES = ['pending', 'claimed', 'expired', 'cancelled'];
 export const TWO_FACTOR_PURPOSES = ['player_login', 'operator_login'];
-export const AVATAR_BODY_TYPES = ['runner', 'android', 'sprite', 'guardian'];
+export const AVATAR_BODY_TYPES = ['hero', 'street', 'runner', 'android', 'guardian'];
 export const AVATAR_EQUIPMENT_SLOTS = [
   'body',
   'head',
@@ -34,12 +34,12 @@ export const PASSPORT_SCOPES = [
 export const defaultAvatar = Object.freeze({
   avatarId: 'default_neon_01',
   baseStyle: 'neon',
-  bodyType: 'runner',
-  bodyId: 'body_runner_core',
-  headId: 'head_spark',
-  helmetId: 'helmet_vector',
-  visorId: 'visor_clear',
-  outfitId: 'outfit_grid',
+  bodyType: 'hero',
+  bodyId: 'body_neon_hero',
+  headId: 'head_neon_human',
+  helmetId: 'helmet_mohawk_glow',
+  visorId: 'visor_shutter',
+  outfitId: 'outfit_street_leather',
   backId: 'back_none',
   trailId: 'trail_neon',
   auraId: 'aura_none',
@@ -49,8 +49,8 @@ export const defaultAvatar = Object.freeze({
   accentColor: '#FFD400',
   frameId: 'frame_neon_start',
   badgeId: 'rookie',
-  poseId: 'idle',
-  animationSet: 'runner_idle',
+  poseId: 'power',
+  animationSet: 'hero_idle',
   addons: []
 });
 

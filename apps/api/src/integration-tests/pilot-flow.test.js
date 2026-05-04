@@ -95,15 +95,24 @@ test('Player Passport pilot flow works against Mongo', async () => {
     headers: { 'x-player-id': playerId }
   });
   assert.equal(inventory.response.status, 200);
-  assert.equal(inventory.body.inventory.equipped.body, 'body_runner_core');
+  assert.equal(inventory.body.inventory.equipped.body, 'body_neon_hero');
   assert.equal(inventory.body.inventory.equipped.trail, 'trail_neon');
 
   const lockedEquip = await request('/api/player/me/equipment', {
     method: 'PATCH',
     headers: { 'x-player-id': playerId },
-    body: JSON.stringify({ slot: 'back', cosmeticId: 'back_boost_pack' })
+    body: JSON.stringify({ slot: 'helmet', cosmeticId: 'helmet_champion_crown' })
   });
   assert.equal(lockedEquip.response.status, 403);
+
+  const bodyEquip = await request('/api/player/me/equipment', {
+    method: 'PATCH',
+    headers: { 'x-player-id': playerId },
+    body: JSON.stringify({ slot: 'body', cosmeticId: 'body_street_legend' })
+  });
+  assert.equal(bodyEquip.response.status, 200);
+  assert.equal(bodyEquip.body.player.avatar.bodyId, 'body_street_legend');
+  assert.equal(bodyEquip.body.player.avatar.bodyType, 'street');
 
   const starterEquip = await request('/api/player/me/equipment', {
     method: 'PATCH',

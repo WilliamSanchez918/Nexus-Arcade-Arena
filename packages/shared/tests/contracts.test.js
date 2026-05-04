@@ -18,7 +18,7 @@ test('avatar manifests provide V1 defaults', () => {
   const avatar = AvatarManifestSchema.parse({});
   assert.equal(avatar.avatarId, 'default_neon_01');
   assert.equal(avatar.primaryColor, '#00E5FF');
-  assert.equal(avatar.bodyId, 'body_runner_core');
+  assert.equal(avatar.bodyId, 'body_neon_hero');
   assert.equal(avatar.trailId, 'trail_neon');
   assert.equal(avatar.addons.length, 0);
 });

@@ -304,14 +304,28 @@ input {
 
 .builder-panel {
   display: grid;
-  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+  grid-template-columns: minmax(360px, 0.92fr) minmax(420px, 1.08fr);
+  align-items: start;
   gap: 24px;
+}
+
+.avatar-preview-column {
+  display: grid;
+  gap: 14px;
+}
+
+.builder-panel .panel-header {
+  justify-content: space-between;
+}
+
+.builder-panel .panel-header h2 {
+  margin: 0;
 }
 
 .builder-controls {
   display: grid;
   align-content: start;
-  gap: 18px;
+  gap: 14px;
 }
 
 .builder-controls h3,
@@ -324,10 +338,31 @@ input {
   color: #f6f8ff;
 }
 
+.customizer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.customizer-header h3,
+.customizer-header h2 {
+  margin: 0;
+}
+
+.customizer-header span,
+.builder-tag {
+  color: #ffd400;
+  font-size: 0.78rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .avatar-canvas {
   width: 100%;
-  aspect-ratio: 1;
-  min-height: 320px;
+  aspect-ratio: 4 / 5;
+  min-height: 520px;
+  max-height: 660px;
   overflow: hidden;
   border: 1px solid rgba(0, 229, 255, 0.52);
   border-radius: 8px;
@@ -348,6 +383,43 @@ input {
 .avatar-editor input[type="color"] {
   height: 48px;
   padding: 5px;
+}
+
+.slot-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.slot-tab {
+  min-height: 38px;
+  color: #f6f8ff;
+  background: rgba(246, 248, 255, 0.07);
+  border: 1px solid rgba(174, 184, 202, 0.22);
+  border-radius: 6px;
+  padding: 0 12px;
+  cursor: pointer;
+}
+
+.slot-tab.active {
+  color: #05101d;
+  background: #ffd400;
+  border-color: #ffd400;
+  font-weight: 900;
+}
+
+.inline-slot-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.inline-catalog {
+  max-height: 360px;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  padding-right: 4px;
 }
 
 .catalog-slots {
@@ -576,5 +648,15 @@ input {
 
   .topbar h1 {
     font-size: 2rem;
+  }
+
+  .avatar-canvas {
+    min-height: 420px;
+    max-height: none;
+  }
+
+  .inline-catalog {
+    grid-template-columns: 1fr;
+    max-height: 320px;
   }
 }

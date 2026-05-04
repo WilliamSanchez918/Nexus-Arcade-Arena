@@ -274,101 +274,315 @@ function groupCatalogItems(items = []) {
   }, {});
 }
 
+const avatarBodyProfiles = Object.freeze({
+  body_neon_hero: { shoulder: 0.56, waist: 0.32, torsoHeight: 1.02, armLength: 0.86, legLength: 1.06, headScale: 0.94, bulk: 1, stance: 0.23 },
+  body_runner_core: { shoulder: 0.5, waist: 0.29, torsoHeight: 0.96, armLength: 0.82, legLength: 1.12, headScale: 0.9, bulk: 0.88, stance: 0.2 },
+  body_street_legend: { shoulder: 0.52, waist: 0.28, torsoHeight: 0.98, armLength: 0.84, legLength: 1.08, headScale: 0.92, bulk: 0.92, stance: 0.22 },
+  body_synth_athlete: { shoulder: 0.54, waist: 0.3, torsoHeight: 1, armLength: 0.86, legLength: 1.18, headScale: 0.9, bulk: 0.94, stance: 0.24 },
+  body_android_prime: { shoulder: 0.6, waist: 0.35, torsoHeight: 1.04, armLength: 0.88, legLength: 1.08, headScale: 0.88, bulk: 1.08, stance: 0.24 },
+  body_guardian_frame: { shoulder: 0.66, waist: 0.38, torsoHeight: 1.06, armLength: 0.9, legLength: 1.04, headScale: 0.92, bulk: 1.18, stance: 0.29 }
+});
+
+const avatarPoseProfiles = Object.freeze({
+  idle: { lean: 0, leftArm: -0.2, rightArm: 0.2, leftLeg: -0.07, rightLeg: 0.07, handY: -0.88 },
+  power: { lean: 0, leftArm: -0.42, rightArm: 0.42, leftLeg: -0.16, rightLeg: 0.16, handY: -0.9 },
+  street: { lean: -0.08, leftArm: -0.08, rightArm: 0.48, leftLeg: -0.03, rightLeg: 0.13, handY: -0.86 },
+  victory: { lean: 0.02, leftArm: -2.35, rightArm: 2.35, leftLeg: -0.09, rightLeg: 0.09, handY: -0.72 }
+});
+
 function AvatarModel({ avatar = defaultAvatar }) {
   const groupRef = useRef(null);
   const primary = avatar.primaryColor || defaultAvatar.primaryColor;
   const secondary = avatar.secondaryColor || defaultAvatar.secondaryColor;
   const accent = avatar.accentColor || defaultAvatar.accentColor;
+  const profile = avatarBodyProfiles[avatar.bodyId] || avatarBodyProfiles.body_neon_hero;
+  const pose = avatarPoseProfiles[avatar.poseId] || avatarPoseProfiles.idle;
   const isAndroid = avatar.bodyType === 'android' || avatar.bodyId === 'body_android_prime';
-  const hasBoostPack = avatar.backId === 'back_boost_pack';
-  const hasAura = avatar.auraId === 'aura_electric';
-  const hasCrown = avatar.helmetId === 'helmet_champion_crown';
-  const hasPrismVisor = avatar.visorId === 'visor_prism';
+  const isGuardian = avatar.bodyType === 'guardian' || avatar.bodyId === 'body_guardian_frame';
+  const torsoColor = isAndroid ? '#7984a9' : '#111827';
+  const suitColor = avatar.outfitId === 'outfit_street_leather' ? '#0b0e17' : '#111a2c';
+  const jacketColor = avatar.outfitId === 'outfit_laser_varsity' ? '#f6f8ff' : suitColor;
+  const armorColor = avatar.outfitId === 'outfit_sunset_armor' ? '#35144b' : '#101827';
+  const skinColor = isAndroid ? '#9aa4c9' : (avatar.headId === 'head_arcade_star' ? '#d9b477' : '#c98b64');
+  const visorGlow = ['visor_prism', 'visor_mirrorwrap'].includes(avatar.visorId) ? accent : secondary;
+  const trailColor = avatar.trailId === 'trail_fireline' || avatar.trailId === 'trail_comet' ? accent : primary;
+  const rootTilt = pose.lean;
+  const shoulderX = profile.shoulder * 1.08;
+  const legX = profile.stance;
+  const armRadius = 0.075 * profile.bulk;
+  const legRadius = 0.095 * profile.bulk;
 
   useFrame((state, delta) => {
     if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.28;
+      groupRef.current.rotation.y += delta * 0.24;
       groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 1.7) * 0.035;
     }
   });
 
   return (
-    <group ref={groupRef} position={[0, -0.65, 0]}>
-      {hasAura ? (
-        <mesh position={[0, 0.95, -0.04]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[1.08, 0.018, 12, 72]} />
-          <meshBasicMaterial color={secondary} transparent opacity={0.48} />
-        </mesh>
-      ) : null}
-      {hasBoostPack ? (
-        <group position={[0, 0.35, -0.34]}>
-          <mesh>
-            <boxGeometry args={[0.44, 0.78, 0.18]} />
-            <meshStandardMaterial color="#182235" roughness={0.42} metalness={0.35} />
+    <group ref={groupRef} position={[0, -0.12, 0]} rotation={[0, 0, rootTilt]}>
+      {avatar.auraId !== 'aura_none' ? (
+        <group position={[0, 0.3, -0.18]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[1.12, 0.014, 12, 96]} />
+            <meshBasicMaterial color={avatar.auraId === 'aura_sunset_ring' ? accent : secondary} transparent opacity={0.52} />
           </mesh>
-          <mesh position={[-0.14, -0.46, -0.03]}>
-            <coneGeometry args={[0.08, 0.32, 18]} />
-            <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={1.3} />
-          </mesh>
-          <mesh position={[0.14, -0.46, -0.03]}>
-            <coneGeometry args={[0.08, 0.32, 18]} />
-            <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={1.3} />
-          </mesh>
+          {avatar.auraId === 'aura_outrun_scan' ? [-0.38, -0.12, 0.14, 0.4].map((y) => (
+            <mesh key={y} position={[0, y, -0.02]}>
+              <boxGeometry args={[1.82, 0.018, 0.012]} />
+              <meshBasicMaterial color={primary} transparent opacity={0.35} />
+            </mesh>
+          )) : null}
+          {avatar.auraId === 'aura_electric' ? [0, 0.55, 1.1, 1.65].map((rotation) => (
+            <mesh key={rotation} rotation={[Math.PI / 2, 0, rotation]}>
+              <torusGeometry args={[0.72, 0.006, 8, 48]} />
+              <meshBasicMaterial color={secondary} transparent opacity={0.38} />
+            </mesh>
+          )) : null}
         </group>
       ) : null}
-      <mesh position={[0, 0.15, 0]}>
-        <capsuleGeometry args={[isAndroid ? 0.38 : 0.34, isAndroid ? 0.96 : 1.08, 8, 18]} />
-        <meshStandardMaterial color={primary} roughness={0.26} metalness={0.28} />
-      </mesh>
-      <mesh position={[0, 0.26, 0.28]}>
-        <boxGeometry args={[0.5, 0.52, 0.08]} />
-        <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.28} />
-      </mesh>
-      <mesh position={[-0.52, 0.18, 0]}>
-        <capsuleGeometry args={[0.1, 0.7, 7, 12]} />
-        <meshStandardMaterial color={secondary} roughness={0.34} metalness={0.18} />
-      </mesh>
-      <mesh position={[0.52, 0.18, 0]}>
-        <capsuleGeometry args={[0.1, 0.7, 7, 12]} />
-        <meshStandardMaterial color={secondary} roughness={0.34} metalness={0.18} />
-      </mesh>
-      <mesh position={[-0.2, -0.88, 0]}>
-        <capsuleGeometry args={[0.11, 0.86, 7, 12]} />
-        <meshStandardMaterial color="#101827" roughness={0.4} metalness={0.22} />
-      </mesh>
-      <mesh position={[0.2, -0.88, 0]}>
-        <capsuleGeometry args={[0.11, 0.86, 7, 12]} />
-        <meshStandardMaterial color="#101827" roughness={0.4} metalness={0.22} />
-      </mesh>
-      <mesh position={[0, 1.08, 0]}>
-        <sphereGeometry args={[0.33, 32, 24]} />
-        <meshStandardMaterial color={avatar.headId === 'head_arcade_star' ? accent : primary} roughness={0.18} metalness={0.34} />
-      </mesh>
-      <mesh position={[0, 1.13, 0.28]}>
-        <boxGeometry args={[0.52, 0.12, 0.08]} />
-        <meshStandardMaterial color={hasPrismVisor ? accent : '#d7fbff'} emissive={hasPrismVisor ? secondary : '#00e5ff'} emissiveIntensity={0.42} transparent opacity={0.88} />
-      </mesh>
-      {avatar.helmetId !== 'helmet_vector' ? null : (
-        <mesh position={[0, 1.24, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.34, 0.035, 10, 48]} />
-          <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.35} />
+
+      {avatar.backId === 'back_arcade_cape' ? (
+        <mesh position={[0, -0.1, -0.34]} rotation={[0.16, 0, 0]}>
+          <boxGeometry args={[profile.shoulder * 1.55, 1.24, 0.026]} />
+          <meshStandardMaterial color="#13081f" emissive={secondary} emissiveIntensity={0.18} roughness={0.62} transparent opacity={0.86} />
         </mesh>
-      )}
-      {hasCrown ? (
-        <group position={[0, 1.45, 0]}>
-          {[-0.2, 0, 0.2].map((x) => (
-            <mesh key={x} position={[x, 0, 0]}>
-              <coneGeometry args={[0.08, 0.28, 5]} />
-              <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.5} />
+      ) : null}
+      {avatar.backId === 'back_boost_pack' ? (
+        <group position={[0, 0.28, -0.38]}>
+          <mesh>
+            <boxGeometry args={[0.42, 0.74, 0.16]} />
+            <meshStandardMaterial color="#182235" roughness={0.42} metalness={0.38} />
+          </mesh>
+          {[-0.13, 0.13].map((x) => (
+            <mesh key={x} position={[x, -0.48, -0.03]}>
+              <coneGeometry args={[0.075, 0.3, 18]} />
+              <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={1.3} />
             </mesh>
           ))}
         </group>
       ) : null}
-      {avatar.trailId === 'trail_comet' || avatar.trailId === 'trail_neon' ? (
-        <mesh position={[0, -1.35, -0.2]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.48, 0.02, 10, 60]} />
-          <meshBasicMaterial color={avatar.trailId === 'trail_comet' ? accent : primary} transparent opacity={0.58} />
+      {avatar.backId === 'back_katana_pair' ? (
+        <group position={[0, 0.28, -0.42]}>
+          {[-0.7, 0.7].map((angle) => (
+            <group key={angle} rotation={[0, 0, angle]}>
+              <mesh>
+                <cylinderGeometry args={[0.018, 0.018, 1.44, 10]} />
+                <meshStandardMaterial color="#d6e7ff" metalness={0.82} roughness={0.22} />
+              </mesh>
+              <mesh position={[0, -0.82, 0]}>
+                <boxGeometry args={[0.14, 0.08, 0.06]} />
+                <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.45} />
+              </mesh>
+            </group>
+          ))}
+        </group>
+      ) : null}
+      {avatar.backId === 'back_boom_box' ? (
+        <group position={[0, 0.05, -0.42]}>
+          <mesh>
+            <boxGeometry args={[0.76, 0.34, 0.18]} />
+            <meshStandardMaterial color="#111827" roughness={0.34} metalness={0.28} />
+          </mesh>
+          {[-0.24, 0.24].map((x) => (
+            <mesh key={x} position={[x, 0, -0.1]}>
+              <cylinderGeometry args={[0.1, 0.1, 0.025, 24]} />
+              <meshStandardMaterial color={primary} emissive={primary} emissiveIntensity={0.24} />
+            </mesh>
+          ))}
+        </group>
+      ) : null}
+
+      <group>
+        <mesh position={[0, 0.12, 0]} scale={[1, 1, 0.48]}>
+          <cylinderGeometry args={[profile.shoulder, profile.waist, profile.torsoHeight, 7]} />
+          <meshStandardMaterial color={torsoColor} roughness={0.32} metalness={isAndroid ? 0.52 : 0.22} />
         </mesh>
+        <mesh position={[0, 0.46, 0.24]}>
+          <boxGeometry args={[profile.shoulder * 1.42, 0.34, 0.07]} />
+          <meshStandardMaterial color={jacketColor} emissive={secondary} emissiveIntensity={0.16} roughness={0.36} metalness={0.18} />
+        </mesh>
+        <mesh position={[0, -0.44, 0]}>
+          <boxGeometry args={[profile.waist * 1.62, 0.24, 0.34]} />
+          <meshStandardMaterial color="#0d1423" roughness={0.38} metalness={0.18} />
+        </mesh>
+        {avatar.outfitId === 'outfit_street_leather' || avatar.outfitId === 'outfit_laser_varsity' ? (
+          <>
+            {[-0.24, 0.24].map((x) => (
+              <mesh key={x} position={[x, 0.22, 0.31]} rotation={[0, 0, x < 0 ? -0.2 : 0.2]}>
+                <boxGeometry args={[0.18, 0.84, 0.055]} />
+                <meshStandardMaterial color={jacketColor} emissive={x < 0 ? primary : secondary} emissiveIntensity={0.2} roughness={0.44} />
+              </mesh>
+            ))}
+          </>
+        ) : null}
+        {avatar.outfitId === 'outfit_battle_harness' ? (
+          <>
+            <mesh position={[0, 0.2, 0.34]} rotation={[0, 0, 0.72]}>
+              <boxGeometry args={[0.11, 1.08, 0.06]} />
+              <meshStandardMaterial color={secondary} roughness={0.36} metalness={0.42} />
+            </mesh>
+            <mesh position={[0, 0.2, 0.35]} rotation={[0, 0, -0.72]}>
+              <boxGeometry args={[0.11, 1.08, 0.06]} />
+              <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.22} />
+            </mesh>
+          </>
+        ) : null}
+        {avatar.outfitId === 'outfit_sunset_armor' || isGuardian ? (
+          <>
+            <mesh position={[0, 0.48, 0.34]}>
+              <boxGeometry args={[profile.shoulder * 1.18, 0.24, 0.08]} />
+              <meshStandardMaterial color={armorColor} emissive={accent} emissiveIntensity={0.18} roughness={0.28} metalness={0.44} />
+            </mesh>
+            {[-0.42, 0.42].map((x) => (
+              <mesh key={x} position={[x, 0.18, 0.33]}>
+                <boxGeometry args={[0.18, 0.46, 0.08]} />
+                <meshStandardMaterial color="#1c2742" emissive={secondary} emissiveIntensity={0.14} metalness={0.36} />
+              </mesh>
+            ))}
+          </>
+        ) : null}
+        {isAndroid ? (
+          <>
+            {[-0.18, 0.18].map((x) => (
+              <mesh key={x} position={[x, 0.1, 0.35]}>
+                <boxGeometry args={[0.08, 0.72, 0.045]} />
+                <meshBasicMaterial color={secondary} transparent opacity={0.72} />
+              </mesh>
+            ))}
+          </>
+        ) : null}
+      </group>
+
+      {[-1, 1].map((side) => (
+        <group key={side} position={[side * shoulderX, 0.42, 0]} rotation={[0, 0, side < 0 ? pose.leftArm : pose.rightArm]}>
+          <mesh position={[0, -0.27 * profile.armLength, 0]}>
+            <capsuleGeometry args={[armRadius, 0.42 * profile.armLength, 8, 12]} />
+            <meshStandardMaterial color={secondary} roughness={0.34} metalness={0.2} />
+          </mesh>
+          <mesh position={[0, -0.68 * profile.armLength, 0.03]}>
+            <capsuleGeometry args={[armRadius * 0.9, 0.38 * profile.armLength, 8, 12]} />
+            <meshStandardMaterial color={isAndroid ? '#8b95ba' : '#121b2d'} roughness={0.38} metalness={isAndroid ? 0.5 : 0.18} />
+          </mesh>
+          <mesh position={[0, pose.handY * profile.armLength, 0.04]}>
+            <sphereGeometry args={[0.1 * profile.bulk, 18, 12]} />
+            <meshStandardMaterial color={skinColor} roughness={0.3} metalness={0.18} />
+          </mesh>
+          {(avatar.outfitId === 'outfit_sunset_armor' || isGuardian) ? (
+            <mesh position={[0, -0.03, 0.03]}>
+              <boxGeometry args={[0.26 * profile.bulk, 0.2, 0.18]} />
+              <meshStandardMaterial color={armorColor} emissive={secondary} emissiveIntensity={0.14} />
+            </mesh>
+          ) : null}
+        </group>
+      ))}
+
+      {[-1, 1].map((side) => (
+        <group key={side} position={[side * legX, -0.52, 0]} rotation={[0, 0, side < 0 ? pose.leftLeg : pose.rightLeg]}>
+          <mesh position={[0, -0.35 * profile.legLength, 0]}>
+            <capsuleGeometry args={[legRadius, 0.54 * profile.legLength, 8, 12]} />
+            <meshStandardMaterial color="#101827" roughness={0.42} metalness={0.22} />
+          </mesh>
+          <mesh position={[0, -0.86 * profile.legLength, 0.02]}>
+            <capsuleGeometry args={[legRadius * 0.86, 0.5 * profile.legLength, 8, 12]} />
+            <meshStandardMaterial color={isAndroid ? '#7f8bae' : primary} roughness={0.34} metalness={isAndroid ? 0.48 : 0.22} />
+          </mesh>
+          <mesh position={[side * 0.03, -1.18 * profile.legLength, 0.12]}>
+            <boxGeometry args={[0.24 * profile.bulk, 0.13, 0.38]} />
+            <meshStandardMaterial color="#080d19" roughness={0.42} metalness={0.28} />
+          </mesh>
+        </group>
+      ))}
+
+      <mesh position={[0, 0.77, 0]}>
+        <cylinderGeometry args={[0.12 * profile.headScale, 0.1 * profile.headScale, 0.18, 16]} />
+        <meshStandardMaterial color={skinColor} roughness={0.32} metalness={0.18} />
+      </mesh>
+      <mesh position={[0, 1.08, 0]} scale={[0.84, 1.08, 0.72]}>
+        <sphereGeometry args={[0.31 * profile.headScale, 32, 22]} />
+        <meshStandardMaterial color={skinColor} roughness={0.22} metalness={avatar.headId === 'head_arcade_star' ? 0.46 : 0.2} />
+      </mesh>
+      <mesh position={[0, 1.06, 0.24]}>
+        <boxGeometry args={[0.1, 0.08, 0.12]} />
+        <meshStandardMaterial color={skinColor} roughness={0.28} />
+      </mesh>
+
+      {avatar.visorId === 'visor_terminus' ? (
+        [-0.11, 0.11].map((x) => (
+          <mesh key={x} position={[x, 1.12, 0.27]}>
+            <boxGeometry args={[0.12, 0.055, 0.045]} />
+            <meshStandardMaterial color="#ff4545" emissive="#ff4545" emissiveIntensity={0.95} />
+          </mesh>
+        ))
+      ) : (
+        <group position={[0, 1.12, 0.27]}>
+          <mesh>
+            <boxGeometry args={[avatar.visorId === 'visor_mirrorwrap' ? 0.58 : 0.48, avatar.visorId === 'visor_shutter' ? 0.15 : 0.1, 0.055]} />
+            <meshStandardMaterial color={avatar.visorId === 'visor_clear' ? '#d7fbff' : visorGlow} emissive={visorGlow} emissiveIntensity={0.44} transparent opacity={avatar.visorId === 'visor_clear' ? 0.72 : 0.86} metalness={0.36} roughness={0.18} />
+          </mesh>
+          {avatar.visorId === 'visor_shutter' ? [-0.045, 0, 0.045].map((y) => (
+            <mesh key={y} position={[0, y, 0.035]}>
+              <boxGeometry args={[0.5, 0.015, 0.02]} />
+              <meshBasicMaterial color="#070b14" />
+            </mesh>
+          )) : null}
+        </group>
+      )}
+
+      {avatar.helmetId === 'helmet_vector' ? (
+        <mesh position={[0, 1.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
+          <torusGeometry args={[0.3 * profile.headScale, 0.028, 10, 48]} />
+          <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.42} />
+        </mesh>
+      ) : null}
+      {avatar.helmetId === 'helmet_mohawk_glow' ? [-0.16, 0, 0.16].map((z) => (
+        <mesh key={z} position={[0, 1.35, z]}>
+          <boxGeometry args={[0.07, 0.44, 0.09]} />
+          <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.7} />
+        </mesh>
+      )) : null}
+      {avatar.helmetId === 'helmet_bandana_laser' ? (
+        <>
+          <mesh position={[0, 1.22, 0.25]}>
+            <boxGeometry args={[0.62, 0.075, 0.055]} />
+            <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.32} />
+          </mesh>
+          <mesh position={[0.32, 1.18, -0.05]} rotation={[0, 0, -0.62]}>
+            <boxGeometry args={[0.1, 0.36, 0.045]} />
+            <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.22} />
+          </mesh>
+        </>
+      ) : null}
+      {avatar.helmetId === 'helmet_viper_hair' ? (
+        <mesh position={[0, 1.38, -0.02]} scale={[0.78, 1.1, 0.48]}>
+          <coneGeometry args={[0.26, 0.56, 5]} />
+          <meshStandardMaterial color="#0b0d16" emissive={accent} emissiveIntensity={0.24} roughness={0.5} />
+        </mesh>
+      ) : null}
+      {avatar.helmetId === 'helmet_champion_crown' ? (
+        <group position={[0, 1.4, 0]}>
+          {[-0.2, 0, 0.2].map((x) => (
+            <mesh key={x} position={[x, 0, 0]}>
+              <coneGeometry args={[0.075, 0.28, 5]} />
+              <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.55} />
+            </mesh>
+          ))}
+        </group>
+      ) : null}
+
+      {avatar.trailId !== 'trail_none' ? (
+        <group position={[0, -1.48, -0.12]}>
+          <mesh rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[avatar.trailId === 'trail_comet' ? 0.64 : 0.5, 0.018, 10, 70]} />
+            <meshBasicMaterial color={trailColor} transparent opacity={0.58} />
+          </mesh>
+          {avatar.trailId === 'trail_laser_grid' ? [-0.34, 0, 0.34].map((x) => (
+            <mesh key={x} position={[x, 0, 0]}>
+              <boxGeometry args={[0.018, 0.018, 0.72]} />
+              <meshBasicMaterial color={secondary} transparent opacity={0.52} />
+            </mesh>
+          )) : null}
+        </group>
       ) : null}
     </group>
   );
@@ -413,6 +627,7 @@ function ProfilePage() {
   const [avatar, setAvatar] = useState(defaultAvatar);
   const [saveState, setSaveState] = useState('');
   const [equipState, setEquipState] = useState('');
+  const [activeAvatarSlot, setActiveAvatarSlot] = useState('body');
   const profile = useAsyncData(() => (getPlayerToken() ? api.getProfile() : Promise.resolve(null)), []);
   const catalog = useAsyncData(() => api.getAvatarCatalog(), []);
   const inventory = useAsyncData(() => (getPlayerToken() ? api.getInventory() : Promise.resolve({ inventory: null })), []);
@@ -472,9 +687,70 @@ function ProfilePage() {
   const catalogBySlot = groupCatalogItems(catalog.data?.items || []);
   const ownedIds = new Set((inventory.data?.inventory?.cosmetics || []).map((item) => item.cosmeticId));
   const equipped = inventory.data?.inventory?.equipped || {};
+  const activeSlotItems = catalogBySlot[activeAvatarSlot] || [];
+  const activeSlotLabel = avatarSlotLabels[activeAvatarSlot] || activeAvatarSlot;
   return (
     <Shell>
       <section className="profile-grid">
+        <div className="panel wide builder-panel">
+          <div className="avatar-preview-column">
+            <div className="panel-header">
+              <h2><Box size={22} /> Avatar builder</h2>
+              <span className="builder-tag">{avatar.bodyType || 'hero'} base</span>
+            </div>
+            <AvatarPreview3D avatar={avatar} />
+          </div>
+          <div className="builder-controls">
+            <div className="customizer-header">
+              <h3><Palette size={18} /> Customize</h3>
+              <button className="icon-button" onClick={() => { catalog.refresh(); inventory.refresh(); }} title="Refresh catalog" type="button"><RefreshCcw size={18} /></button>
+            </div>
+            <div className="avatar-editor">
+              <label>Primary <input type="color" value={avatar.primaryColor} onChange={(event) => updateAvatarDraft({ primaryColor: event.target.value })} /></label>
+              <label>Secondary <input type="color" value={avatar.secondaryColor} onChange={(event) => updateAvatarDraft({ secondaryColor: event.target.value })} /></label>
+              <label>Accent <input type="color" value={avatar.accentColor || defaultAvatar.accentColor} onChange={(event) => updateAvatarDraft({ accentColor: event.target.value })} /></label>
+              <label>Avatar name <input maxLength="40" value={avatar.avatarId} onChange={(event) => updateAvatarDraft({ avatarId: event.target.value })} /></label>
+            </div>
+            <div className="slot-tabs" role="tablist" aria-label="Avatar customization slots">
+              {AVATAR_EQUIPMENT_SLOTS.map((slot) => (
+                <button
+                  aria-selected={activeAvatarSlot === slot}
+                  className={activeAvatarSlot === slot ? 'slot-tab active' : 'slot-tab'}
+                  key={slot}
+                  onClick={() => setActiveAvatarSlot(slot)}
+                  role="tab"
+                  type="button"
+                >
+                  {avatarSlotLabels[slot] || slot}
+                </button>
+              ))}
+            </div>
+            <section className="inline-slot-panel">
+              <div className="customizer-header">
+                <h3><Sparkles size={18} /> {activeSlotLabel}</h3>
+                <span>{activeSlotItems.length} options</span>
+              </div>
+              <div className="inline-catalog">
+                {activeSlotItems.length ? activeSlotItems.map((item) => (
+                  <CatalogItemButton
+                    busy={equipState === `${activeAvatarSlot}:${item.cosmeticId}`}
+                    equippedId={equipped[activeAvatarSlot]}
+                    item={item}
+                    key={item.cosmeticId}
+                    onEquip={equipCosmetic}
+                    owned={ownedIds.has(item.cosmeticId)}
+                  />
+                )) : (
+                  <p className="muted-copy">Catalog is loading for this slot.</p>
+                )}
+              </div>
+            </section>
+            <button className="primary-button" onClick={saveAvatar} type="button">
+              <Save size={18} />
+              {saveState || 'Save avatar'}
+            </button>
+          </div>
+        </div>
         <div className="panel profile-card">
           {player ? <AvatarChip avatar={player.avatar} label={player.displayName} level={player.level} /> : null}
           <dl className="stat-grid">
@@ -490,50 +766,6 @@ function ProfilePage() {
             <div><dt>Avatar ID</dt><dd>{avatar.avatarId}</dd></div>
             <div><dt>OAuth scopes</dt><dd>profile avatar stats</dd></div>
           </dl>
-        </div>
-        <div className="panel wide builder-panel">
-          <div>
-            <h2><Box size={22} /> Avatar builder</h2>
-            <AvatarPreview3D avatar={avatar} />
-          </div>
-          <div className="builder-controls">
-            <h3><Palette size={18} /> Color masks</h3>
-            <div className="avatar-editor">
-              <label>Primary <input type="color" value={avatar.primaryColor} onChange={(event) => updateAvatarDraft({ primaryColor: event.target.value })} /></label>
-              <label>Secondary <input type="color" value={avatar.secondaryColor} onChange={(event) => updateAvatarDraft({ secondaryColor: event.target.value })} /></label>
-              <label>Accent <input type="color" value={avatar.accentColor || defaultAvatar.accentColor} onChange={(event) => updateAvatarDraft({ accentColor: event.target.value })} /></label>
-              <label>Avatar name <input maxLength="40" value={avatar.avatarId} onChange={(event) => updateAvatarDraft({ avatarId: event.target.value })} /></label>
-            </div>
-            <button className="primary-button" onClick={saveAvatar} type="button">
-              <Save size={18} />
-              {saveState || 'Save avatar'}
-            </button>
-          </div>
-        </div>
-        <div className="panel wide">
-          <div className="panel-header">
-            <h2><Sparkles size={22} /> Avatar add-ons</h2>
-            <button className="icon-button" onClick={() => { catalog.refresh(); inventory.refresh(); }} title="Refresh catalog" type="button"><RefreshCcw size={18} /></button>
-          </div>
-          <div className="catalog-slots">
-            {AVATAR_EQUIPMENT_SLOTS.map((slot) => (
-              <section className="catalog-slot" key={slot}>
-                <h3>{avatarSlotLabels[slot] || slot}</h3>
-                <div className="catalog-items">
-                  {(catalogBySlot[slot] || []).map((item) => (
-                    <CatalogItemButton
-                      busy={equipState === `${slot}:${item.cosmeticId}`}
-                      equippedId={equipped[slot]}
-                      item={item}
-                      key={item.cosmeticId}
-                      onEquip={equipCosmetic}
-                      owned={ownedIds.has(item.cosmeticId)}
-                    />
-                  ))}
-                </div>
-              </section>
-            ))}
-          </div>
         </div>
         <div className="panel wide">
           <h2><Trophy size={22} /> Rush Run leaderboard</h2>

@@ -13,6 +13,10 @@ import {
   exportAvatarRuntimeManifest,
   defaultAvatar
 } from '../../../packages/shared/src/index.js';
+import {
+  HAZARD_TYPES,
+  RUNNER_TUNING
+} from './gameTuning.js';
 
 test('canonical JSON sorts object keys and omits signatures', () => {
   assert.equal(canonicalJson({ b: 2, signature: 'skip', a: 1 }), '{"a":1,"b":2}');
@@ -54,4 +58,11 @@ test('Rush Run result telemetry includes avatar contract details', async () => {
   assert.equal(result.telemetry.avatar.manifestVersion, 'nexus-avatar-manifest/v1');
   assert.equal(result.players[0].telemetry.avatar.avatarId, 'guest_bot');
   assert.ok(result.signature);
+});
+
+test('Rush Run movement tuning exposes arcade verbs', () => {
+  assert.ok(RUNNER_TUNING.moveSpeed > 300);
+  assert.ok(RUNNER_TUNING.dashSpeed > RUNNER_TUNING.moveSpeed * 1.8);
+  assert.ok(RUNNER_TUNING.jumpBufferMs > 0);
+  assert.equal(new Set(HAZARD_TYPES.map((hazard) => hazard.telegraph)).size, HAZARD_TYPES.length);
 });

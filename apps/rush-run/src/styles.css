@@ -57,11 +57,14 @@ body {
 
 .hud-stats {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 12px;
+  max-width: min(680px, 58vw);
 }
 
 .hud-stats span {
-  min-width: 98px;
+  min-width: 86px;
   min-height: 48px;
   border: 1px solid var(--player-primary);
   border-radius: 8px;
@@ -111,4 +114,26 @@ body {
   font: inherit;
   font-weight: 900;
   cursor: pointer;
+}
+
+@media (max-width: 780px) {
+  #hud {
+    inset: 14px 14px auto;
+    display: grid;
+  }
+
+  #hud strong {
+    font-size: 1.45rem;
+  }
+
+  .hud-stats {
+    max-width: none;
+    justify-content: flex-start;
+  }
+
+  .hud-stats span {
+    min-width: 72px;
+    min-height: 38px;
+    font-size: 0.95rem;
+  }
 }

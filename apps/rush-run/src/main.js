@@ -5,6 +5,12 @@ import {
   runnerVisualProfile,
   runtimeAvatarForPlayer
 } from './avatarContract.js';
+import {
+  GAME_SIZE,
+  HAZARD_TYPES,
+  PICKUP_TYPES,
+  RUNNER_TUNING
+} from './gameTuning.js';
 import './styles.css';
 
 const { launchPayload, callbackUrl, callbackSecret } = parseLaunchParams();
@@ -21,13 +27,18 @@ function colorNumber(hex, fallback = 0x00e5ff) {
   return Number.parseInt(hex.slice(1), 16);
 }
 
+function setText(id, value) {
+  const element = document.getElementById(id);
+  if (element) {
+    element.textContent = value;
+  }
+}
+
 document.documentElement.style.setProperty('--player-primary', avatarColors.primary);
 document.documentElement.style.setProperty('--player-secondary', avatarColors.secondary);
 document.documentElement.style.setProperty('--player-accent', avatarColors.accent);
-
-
-document.getElementById('player-label').textContent = `${primaryPlayer.displayName} - Level ${primaryPlayer.level}`;
-document.getElementById('avatar-contract').textContent = `${primaryAvatar.manifestVersion} - ${primaryAvatar.avatarId}`;
+setText('player-label', `${primaryPlayer.displayName} - Level ${primaryPlayer.level}`);
+setText('avatar-contract', `${primaryAvatar.manifestVersion} - ${primaryAvatar.avatarId}`);
 
 function createAvatarRunner(scene, runtimeAvatar) {
   const colors = runtimeAvatar.colors;
@@ -97,57 +108,83 @@ class RushRunScene extends Phaser.Scene {
     this.score = 0;
     this.boosts = 0;
     this.collisions = 0;
-    this.timeRemaining = 60;
-    this.speed = 280;
+    this.timeRemaining = 75;
+    this.speed = RUNNER_TUNING.startSpeed;
     this.finished = false;
+    this.airJumpsRemaining = 1;
+    this.jumpBufferUntil = 0;
+    this.lastGroundedAt = 0;
+    this.dashSeconds = 0;
+    this.dashCooldown = 0;
+    this.dashDirection = 1;
+    this.invulnerableUntil = 0;
+    this.combo = 1;
+    this.pickupStreak = 0;
+    this.nextHazardDelay = 1850;
+    this.nextPickupDelay = 900;
   }
 
   preload() {
     this.load.svg('runner', '/assets/runner.svg', { width: 72, height: 96 });
-    this.load.svg('hurdle', '/assets/hurdle.svg', { width: 70, height: 70 });
-    this.load.svg('boost', '/assets/boost.svg', { width: 50, height: 50 });
     this.load.svg('track', '/assets/track-tile.svg', { width: 256, height: 128 });
   }
 
   create() {
-    this.add.tileSprite(480, 352, 960, 128, 'track').setScrollFactor(0).setName('track');
-    this.aura = this.add.circle(
-      170,
-      292,
-      52,
-      colorNumber(avatarColors.secondary, 0xff2ed1),
-      avatarProfile.auraStyle === 'aura_electric' ? 0.22 : 0.08
-    );
-    this.runner = this.physics.add.sprite(170, 286, 'runner');
+    this.createWorld();
+    this.runner = this.physics.add.sprite(190, 286, 'runner');
     this.runner.setVisible(false);
-    this.runner.setCollideWorldBounds(true);
-    this.runner.body.setSize(44, 74).setOffset(14, 18);
+    this.runner.setCollideWorldBounds(false);
+    this.setStandingHitbox();
+
     this.avatarRig = createAvatarRunner(this, primaryAvatar);
     this.avatarRig.container.setPosition(this.runner.x, this.runner.y);
+
     this.trail = this.add.rectangle(
       128,
       310,
-      avatarProfile.trailStyle === 'trail_comet' ? 100 : 74,
+      avatarProfile.trailStyle === 'trail_comet' ? 128 : 84,
       10,
       colorNumber(avatarProfile.trailStyle === 'trail_comet' ? avatarColors.accent : avatarColors.primary, 0x00e5ff),
-      avatarProfile.trailStyle === 'trail_comet' ? 0.58 : 0.36
+      avatarProfile.trailStyle === 'trail_comet' ? 0.6 : 0.38
     );
 
-    this.ground = this.add.rectangle(480, 374, 960, 10, 0x00e5ff, 0);
+    this.ground = this.add.rectangle(GAME_SIZE.width / 2, GAME_SIZE.groundY, GAME_SIZE.width, 12, 0x00e5ff, 0);
     this.physics.add.existing(this.ground, true);
     this.physics.add.collider(this.runner, this.ground);
 
-    this.hurdles = this.physics.add.group();
-    this.boostGroup = this.physics.add.group();
-    this.physics.add.overlap(this.runner, this.hurdles, this.hitHurdle, undefined, this);
-    this.physics.add.overlap(this.runner, this.boostGroup, this.collectBoost, undefined, this);
+    this.hazards = this.physics.add.group({ allowGravity: false, immovable: true });
+    this.pickups = this.physics.add.group({ allowGravity: false, immovable: true });
+    this.physics.add.overlap(this.runner, this.hazards, this.hitHazard, undefined, this);
+    this.physics.add.overlap(this.runner, this.pickups, this.collectPickup, undefined, this);
 
     this.cursors = this.input.keyboard.createCursorKeys();
-    this.keys = this.input.keyboard.addKeys('A,D,W,SPACE');
+    this.keys = this.input.keyboard.addKeys('A,D,W,S,J,SPACE');
+    this.shiftKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SHIFT);
+    this.input.keyboard.addCapture(['UP', 'DOWN', 'LEFT', 'RIGHT', 'SPACE', 'SHIFT', 'W', 'A', 'S', 'D', 'J']);
 
-    this.time.addEvent({ delay: 1250, loop: true, callback: this.spawnObstacle, callbackScope: this });
-    this.time.addEvent({ delay: 2200, loop: true, callback: this.spawnBoost, callbackScope: this });
     this.time.addEvent({ delay: 1000, loop: true, callback: this.tickClock, callbackScope: this });
+    this.refreshHud();
+  }
+
+  createWorld() {
+    this.add.rectangle(480, 270, 960, 540, 0x060a14);
+    this.add.rectangle(480, 394, 960, 4, colorNumber(avatarColors.primary), 0.95);
+    this.add.rectangle(480, 408, 960, 4, colorNumber(avatarColors.secondary, 0xff2ed1), 0.72);
+    this.track = this.add.tileSprite(480, 350, 960, 132, 'track').setScrollFactor(0).setName('track');
+    this.backLines = [0, 1, 2, 3].map((index) => this.add.tileSprite(
+      480,
+      130 + index * 48,
+      960,
+      20,
+      'track'
+    ).setAlpha(0.05 + index * 0.025));
+    this.aura = this.add.circle(
+      190,
+      292,
+      54,
+      colorNumber(avatarColors.secondary, 0xff2ed1),
+      avatarProfile.auraStyle === 'aura_electric' ? 0.24 : 0.1
+    );
   }
 
   update(_time, delta) {
@@ -156,72 +193,210 @@ class RushRunScene extends Phaser.Scene {
     }
 
     const seconds = delta / 1000;
-    this.score += Math.round(seconds * this.speed * 0.8);
-    this.speed += seconds * 6;
-    document.getElementById('score').textContent = this.score.toLocaleString();
+    const now = this.time.now;
+    this.updateTimers(seconds);
+    this.updateScore(seconds);
+    this.updateMovement(seconds, now);
+    this.updateWorld(seconds);
+    this.updateSpawns(delta);
+    this.cleanupObjects();
+    this.refreshHud();
+  }
 
-    const track = this.children.getByName('track');
-    track.tilePositionX += seconds * this.speed;
-    this.aura.setPosition(this.runner.x, this.runner.y + 4);
-    this.trail.setPosition(this.runner.x - 42, this.runner.y + 26);
-    this.avatarRig.container.setPosition(this.runner.x, this.runner.y);
-    this.animateAvatar(seconds);
+  updateTimers(seconds) {
+    this.speed += seconds * RUNNER_TUNING.speedRampPerSecond;
+    this.dashCooldown = Math.max(0, this.dashCooldown - seconds);
+    this.dashSeconds = Math.max(0, this.dashSeconds - seconds);
+  }
+
+  updateScore(seconds) {
+    this.score += Math.round(seconds * this.speed * RUNNER_TUNING.scoreRate * this.combo);
+    setText('score', this.score.toLocaleString());
+  }
+
+  updateMovement(seconds, now) {
+    const grounded = this.runner.body.touching.down || this.runner.body.blocked.down;
+    if (grounded) {
+      this.airJumpsRemaining = 1;
+      this.lastGroundedAt = now;
+    }
 
     const left = this.cursors.left.isDown || this.keys.A.isDown;
     const right = this.cursors.right.isDown || this.keys.D.isDown;
-    const jump = this.cursors.up.isDown || this.keys.W.isDown || this.keys.SPACE.isDown;
+    const jumpHeld = this.cursors.up.isDown || this.keys.W.isDown || this.keys.SPACE.isDown;
+    const jumpPressed = Phaser.Input.Keyboard.JustDown(this.cursors.up) ||
+      Phaser.Input.Keyboard.JustDown(this.keys.W) ||
+      Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
+    const slideHeld = grounded && (this.cursors.down.isDown || this.keys.S.isDown);
+    const dashPressed = Phaser.Input.Keyboard.JustDown(this.shiftKey) || Phaser.Input.Keyboard.JustDown(this.keys.J);
 
-    this.runner.setVelocityX(left ? -220 : right ? 220 : 0);
-    if (jump && this.runner.body.touching.down) {
-      this.runner.setVelocityY(-520);
+    if (jumpPressed) {
+      this.jumpBufferUntil = now + RUNNER_TUNING.jumpBufferMs;
     }
 
-    for (const group of [this.hurdles, this.boostGroup]) {
-      group.children.iterate((child) => {
-        if (child && child.x < -80) {
-          child.destroy();
-        }
-      });
+    if (this.jumpBufferUntil > now) {
+      this.tryJump(grounded, now);
+    }
+
+    if (!jumpHeld && this.runner.body.velocity.y < -230) {
+      this.runner.setVelocityY(this.runner.body.velocity.y * 0.74);
+    }
+
+    if (dashPressed && this.dashCooldown <= 0) {
+      this.dashDirection = left ? -1 : 1;
+      this.dashSeconds = RUNNER_TUNING.dashSeconds;
+      this.dashCooldown = RUNNER_TUNING.dashCooldownSeconds;
+      this.invulnerableUntil = now + 220;
+      this.cameras.main.flash(60, 37, 255, 154);
+      this.triggerAvatarEmote('dash');
+    }
+
+    if (slideHeld) {
+      this.setSlidingHitbox();
+    } else {
+      this.setStandingHitbox();
+    }
+
+    const maxSpeed = grounded ? RUNNER_TUNING.moveSpeed : RUNNER_TUNING.airMoveSpeed;
+    const targetX = this.dashSeconds > 0
+      ? this.dashDirection * RUNNER_TUNING.dashSpeed
+      : (left ? -maxSpeed : right ? maxSpeed : 0);
+    this.runner.setVelocityX(Phaser.Math.Linear(this.runner.body.velocity.x, targetX, Math.min(1, seconds * 13)));
+    this.runner.x = Phaser.Math.Clamp(this.runner.x, GAME_SIZE.minPlayerX, GAME_SIZE.maxPlayerX);
+    this.runner.setVelocityX(this.runner.x <= GAME_SIZE.minPlayerX && this.runner.body.velocity.x < 0 ? 0 : this.runner.body.velocity.x);
+    this.runner.setVelocityX(this.runner.x >= GAME_SIZE.maxPlayerX && this.runner.body.velocity.x > 0 ? 0 : this.runner.body.velocity.x);
+
+    this.isSliding = slideHeld;
+    this.animateAvatar(seconds, grounded);
+  }
+
+  tryJump(grounded, now) {
+    const canCoyoteJump = now - this.lastGroundedAt <= RUNNER_TUNING.coyoteMs;
+    if (grounded || canCoyoteJump) {
+      this.runner.setVelocityY(RUNNER_TUNING.jumpVelocity);
+      this.jumpBufferUntil = 0;
+      this.lastGroundedAt = -Infinity;
+      this.triggerAvatarEmote('jump');
+      return;
+    }
+    if (this.airJumpsRemaining > 0) {
+      this.airJumpsRemaining -= 1;
+      this.runner.setVelocityY(RUNNER_TUNING.doubleJumpVelocity);
+      this.jumpBufferUntil = 0;
+      this.triggerAvatarEmote('jump');
     }
   }
 
-  spawnObstacle() {
+  updateWorld(seconds) {
+    this.track.tilePositionX += seconds * this.speed;
+    this.backLines.forEach((line, index) => {
+      line.tilePositionX += seconds * this.speed * (0.12 + index * 0.06);
+    });
+    this.aura.setPosition(this.runner.x, this.runner.y + 4);
+    this.trail.setPosition(this.runner.x - 54, this.runner.y + 27);
+  }
+
+  updateSpawns(delta) {
+    this.nextHazardDelay -= delta;
+    this.nextPickupDelay -= delta;
+    if (this.nextHazardDelay <= 0) {
+      this.spawnHazard();
+      this.nextHazardDelay = Phaser.Math.Between(820, Math.max(940, 1420 - Math.round(this.speed * 0.9)));
+    }
+    if (this.nextPickupDelay <= 0) {
+      this.spawnPickup();
+      this.nextPickupDelay = Phaser.Math.Between(960, 1700);
+    }
+  }
+
+  spawnHazard() {
     if (this.finished) {
       return;
     }
-    const hurdle = this.hurdles.create(1000, 322, 'hurdle');
-    hurdle.body.setAllowGravity(false);
-    hurdle.setVelocityX(-this.speed);
-    hurdle.body.setSize(52, 54).setOffset(9, 12);
+    const type = Phaser.Utils.Array.GetRandom(HAZARD_TYPES);
+    const x = 1010;
+    const hazard = this.add.rectangle(x, type.y, type.width, type.height, type.color, 0.78)
+      .setStrokeStyle(3, 0xf6f8ff, 0.28);
+    this.physics.add.existing(hazard);
+    this.hazards.add(hazard);
+    hazard.kind = type.kind;
+    hazard.telegraph = type.telegraph;
+    hazard.body.setAllowGravity(false);
+    hazard.body.setImmovable(true);
+    hazard.body.setVelocityX(-this.speed);
+
+    const label = this.add.text(x, type.y - type.height / 2 - 22, type.telegraph, {
+      color: '#f6f8ff',
+      fontFamily: 'monospace',
+      fontSize: '14px',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    hazard.label = label;
   }
 
-  spawnBoost() {
+  spawnPickup() {
     if (this.finished) {
       return;
     }
-    const boost = this.boostGroup.create(1000, Phaser.Math.Between(170, 265), 'boost');
-    boost.body.setAllowGravity(false);
-    boost.setVelocityX(-this.speed * 0.92);
+    const type = Phaser.Utils.Array.GetRandom(PICKUP_TYPES);
+    const x = 1010;
+    const y = Phaser.Math.Between(188, 318);
+    const pickup = this.add.star(x, y, 4, Math.max(5, type.radius * 0.46), type.radius, type.color, 0.9)
+      .setStrokeStyle(2, 0xf6f8ff, 0.42);
+    this.physics.add.existing(pickup);
+    this.pickups.add(pickup);
+    pickup.kind = type.kind;
+    pickup.scoreValue = type.score;
+    pickup.body.setAllowGravity(false);
+    pickup.body.setCircle(type.radius, -type.radius, -type.radius);
+    pickup.body.setVelocityX(-this.speed * 0.92);
   }
 
-  hitHurdle(_runner, hurdle) {
-    hurdle.destroy();
+  hitHazard(_runner, hazard) {
+    const now = this.time.now;
+    if (now < this.invulnerableUntil) {
+      hazard.destroy();
+      hazard.label?.destroy();
+      this.score += 300;
+      return;
+    }
+
+    hazard.destroy();
+    hazard.label?.destroy();
     this.collisions += 1;
-    this.score = Math.max(0, this.score - 350);
-    this.cameras.main.shake(150, 0.01);
-    if (this.collisions >= 3) {
+    this.combo = 1;
+    this.pickupStreak = 0;
+    this.score = Math.max(0, this.score - 500);
+    this.invulnerableUntil = now + RUNNER_TUNING.hurtInvulnerableMs;
+    this.cameras.main.shake(170, 0.012);
+    this.cameras.main.flash(120, 255, 46, 96);
+    this.triggerAvatarEmote('hurt');
+
+    if (this.collisions >= RUNNER_TUNING.maxCollisions) {
       this.finishRun();
     }
   }
 
-  collectBoost(_runner, boost) {
-    boost.destroy();
-    this.boosts += 1;
-    this.score += 600;
-    this.speed += 24;
-    const flash = colorNumber(avatarColors.secondary, 0xff2ed1);
-    this.cameras.main.flash(80, (flash >> 16) & 255, (flash >> 8) & 255, flash & 255);
-    this.triggerAvatarEmote('boost');
+  collectPickup(_runner, pickup) {
+    const kind = pickup.kind;
+    const scoreValue = pickup.scoreValue;
+    pickup.destroy();
+    this.boosts += kind === 'boost' ? 1 : 0;
+    this.pickupStreak += 1;
+    this.combo = Math.min(3, 1 + this.pickupStreak * 0.15);
+    this.score += Math.round(scoreValue * this.combo);
+
+    if (kind === 'boost') {
+      this.speed += 28;
+      this.invulnerableUntil = this.time.now + 180;
+    }
+    if (kind === 'time') {
+      this.timeRemaining = Math.min(99, this.timeRemaining + 4);
+    }
+
+    const flash = colorNumber(kind === 'time' ? avatarColors.primary : avatarColors.secondary, 0xff2ed1);
+    this.cameras.main.flash(70, (flash >> 16) & 255, (flash >> 8) & 255, flash & 255);
+    this.triggerAvatarEmote(kind === 'boost' ? 'dash' : 'pickup');
   }
 
   tickClock() {
@@ -229,10 +404,48 @@ class RushRunScene extends Phaser.Scene {
       return;
     }
     this.timeRemaining -= 1;
-    document.getElementById('timer').textContent = this.timeRemaining;
     if (this.timeRemaining <= 0) {
       this.finishRun();
     }
+  }
+
+  cleanupObjects() {
+    for (const group of [this.hazards, this.pickups]) {
+      group.children.iterate((child) => {
+        if (child && child.x < -100) {
+          child.label?.destroy();
+          child.destroy();
+        } else if (child?.label) {
+          child.label.x = child.x;
+          child.label.y = child.y - child.height / 2 - 22;
+        }
+      });
+    }
+  }
+
+  setStandingHitbox() {
+    if (this.hitboxMode === 'stand') {
+      return;
+    }
+    this.runner.body.setSize(44, 78).setOffset(14, 16);
+    this.hitboxMode = 'stand';
+  }
+
+  setSlidingHitbox() {
+    if (this.hitboxMode === 'slide') {
+      return;
+    }
+    this.runner.body.setSize(62, 42).setOffset(5, 50);
+    this.hitboxMode = 'slide';
+  }
+
+  refreshHud() {
+    setText('score', this.score.toLocaleString());
+    setText('timer', this.timeRemaining);
+    setText('hits', `${Math.max(0, RUNNER_TUNING.maxCollisions - this.collisions)} HP`);
+    setText('speed', `${Math.round(this.speed)} SPD`);
+    setText('dash', this.dashCooldown <= 0 ? 'DASH' : `${this.dashCooldown.toFixed(1)}s`);
+    setText('combo', `${this.combo.toFixed(1)}x`);
   }
 
   async finishRun() {
@@ -255,7 +468,7 @@ class RushRunScene extends Phaser.Scene {
       const result = await buildSignedResult({
         launchPayload,
         score: this.score,
-        durationSeconds: 60 - this.timeRemaining,
+        durationSeconds: 75 - this.timeRemaining,
         boosts: this.boosts,
         collisions: this.collisions,
         avatar: avatarTelemetry(primaryAvatar),
@@ -275,38 +488,46 @@ class RushRunScene extends Phaser.Scene {
     }
   }
 
-  animateAvatar(seconds) {
+  animateAvatar(seconds, grounded) {
     const phase = this.time.now / 1000;
-    const grounded = this.runner.body.touching.down;
-    const stride = Math.sin(phase * (grounded ? 11 : 5));
-    const lift = grounded ? Math.abs(stride) * 3 : -4;
+    const stride = Math.sin(phase * (grounded ? 13 : 5));
+    const lift = grounded ? Math.abs(stride) * 4 : -5;
     const parts = this.avatarRig.parts;
+    const hurtFlicker = this.time.now < this.invulnerableUntil ? 0.68 + Math.sin(phase * 40) * 0.22 : 1;
+    const slideScaleY = this.isSliding ? 0.74 : 1;
 
-    this.avatarRig.container.y = this.runner.y + lift;
-    parts.leftLeg.rotation = stride * 0.34;
-    parts.rightLeg.rotation = -stride * 0.34;
-    parts.leftArm.rotation = -stride * 0.42;
-    parts.rightArm.rotation = stride * 0.42;
+    this.avatarRig.container.setPosition(this.runner.x, this.runner.y + lift + (this.isSliding ? 18 : 0));
+    this.avatarRig.container.alpha = Phaser.Math.Clamp(hurtFlicker, 0.42, 1);
+    parts.leftLeg.rotation = this.isSliding ? 0.96 : stride * 0.42;
+    parts.rightLeg.rotation = this.isSliding ? -0.44 : -stride * 0.42;
+    parts.leftArm.rotation = this.isSliding ? -0.82 : -stride * 0.48;
+    parts.rightArm.rotation = this.isSliding ? 0.82 : stride * 0.48;
     parts.leftHand.x = -34 * avatarProfile.bodyScale + Math.sin(parts.leftArm.rotation) * 16;
     parts.rightHand.x = 34 * avatarProfile.bodyScale + Math.sin(parts.rightArm.rotation) * 16;
-    parts.head.rotation = Math.sin(phase * 3) * 0.035;
+    parts.head.rotation = Math.sin(phase * 3) * 0.04;
     parts.sash.alpha = 0.76 + Math.sin(phase * 8) * 0.12;
-    this.avatarRig.container.rotation = this.runner.body.velocity.y < -20 ? -0.08 : this.runner.body.velocity.y > 80 ? 0.1 : 0;
-    this.avatarRig.container.scaleX = Phaser.Math.Linear(this.avatarRig.container.scaleX, 1, seconds * 8);
-    this.avatarRig.container.scaleY = Phaser.Math.Linear(this.avatarRig.container.scaleY, 1, seconds * 8);
+    this.avatarRig.container.rotation = this.isSliding ? -0.18 : this.runner.body.velocity.y < -20 ? -0.08 : this.runner.body.velocity.y > 80 ? 0.1 : 0;
+    this.avatarRig.container.scaleX = Phaser.Math.Linear(this.avatarRig.container.scaleX, 1, seconds * 9);
+    this.avatarRig.container.scaleY = Phaser.Math.Linear(this.avatarRig.container.scaleY, slideScaleY, seconds * 10);
   }
 
   triggerAvatarEmote(reason) {
-    if (reason !== 'boost' || !this.avatarRig) {
+    if (!this.avatarRig) {
       return;
     }
-    const scale = avatarProfile.emoteId === 'emote_power_flex' ? 1.18 : avatarProfile.emoteId === 'emote_air_guitar' ? 1.12 : 1.08;
+    const scale = reason === 'dash'
+      ? 1.18
+      : reason === 'hurt'
+        ? 0.86
+        : avatarProfile.emoteId === 'emote_power_flex'
+          ? 1.14
+          : 1.08;
     this.tweens.add({
       targets: this.avatarRig.container,
       scaleX: scale,
-      scaleY: scale,
+      scaleY: reason === 'hurt' ? 0.9 : scale,
       yoyo: true,
-      duration: 120,
+      duration: reason === 'hurt' ? 95 : 125,
       ease: 'Sine.easeOut'
     });
   }
@@ -316,12 +537,12 @@ new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game-root',
   backgroundColor: '#060a14',
-  width: 960,
-  height: 540,
+  width: GAME_SIZE.width,
+  height: GAME_SIZE.height,
   physics: {
     default: 'arcade',
     arcade: {
-      gravity: { y: 980 },
+      gravity: { y: 1120 },
       debug: false
     }
   },

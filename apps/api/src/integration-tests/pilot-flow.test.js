@@ -96,6 +96,8 @@ test('Player Passport pilot flow works against Mongo', async () => {
   });
   assert.equal(inventory.response.status, 200);
   assert.equal(inventory.body.inventory.equipped.body, 'body_neon_hero');
+  assert.equal(inventory.body.inventory.equipped.hair, 'hair_glowhawk');
+  assert.equal(inventory.body.inventory.equipped.boots, 'boots_grid_runners');
   assert.equal(inventory.body.inventory.equipped.trail, 'trail_neon');
 
   const lockedEquip = await request('/api/player/me/equipment', {
@@ -113,6 +115,14 @@ test('Player Passport pilot flow works against Mongo', async () => {
   assert.equal(bodyEquip.response.status, 200);
   assert.equal(bodyEquip.body.player.avatar.bodyId, 'body_street_legend');
   assert.equal(bodyEquip.body.player.avatar.bodyType, 'street');
+
+  const bootsEquip = await request('/api/player/me/equipment', {
+    method: 'PATCH',
+    headers: { 'x-player-id': playerId },
+    body: JSON.stringify({ slot: 'boots', cosmeticId: 'boots_combat_neon' })
+  });
+  assert.equal(bootsEquip.response.status, 200);
+  assert.equal(bootsEquip.body.player.avatar.bootsId, 'boots_combat_neon');
 
   const starterEquip = await request('/api/player/me/equipment', {
     method: 'PATCH',

@@ -39,7 +39,7 @@ export async function createCabinetLoginSession({ cabinetId, siteId, desiredSlot
 
   await Cabinet.updateOne(
     { cabinetId },
-    { $setOnInsert: { cabinetId, siteId }, $set: { siteId } },
+    { $setOnInsert: { cabinetId }, $set: { siteId } },
     { upsert: true }
   );
 

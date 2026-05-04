@@ -9,7 +9,7 @@ export async function recordHeartbeat(input, io) {
   await Cabinet.updateOne(
     { cabinetId: heartbeat.cabinetId },
     {
-      $setOnInsert: { cabinetId: heartbeat.cabinetId, siteId: heartbeat.siteId },
+      $setOnInsert: { cabinetId: heartbeat.cabinetId },
       $set: {
         siteId: heartbeat.siteId,
         status: heartbeat.networkOnline ? 'online' : 'offline',

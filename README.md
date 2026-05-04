@@ -54,7 +54,12 @@ Before committing:
 ```powershell
 npm test
 npm run build
+npm run repo:large-files
 git status --short
 ```
 
 Large release artifacts should be attached to GitHub Releases or stored in external asset storage. If a binary asset must become part of the source tree, add a short note explaining why and keep it small enough for normal clone/pull workflows.
+
+## Testing and previews
+
+See `docs/testing-and-previews.md` for Docker-backed integration testing and preview commands.

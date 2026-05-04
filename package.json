@@ -9,11 +9,23 @@
     "dev:web": "vite --config apps/web/vite.config.js --host 127.0.0.1 --port 5173",
     "dev:hub": "concurrently -n hub-vite,electron -c cyan,yellow \"vite --config apps/hub/vite.config.js --host 127.0.0.1 --port 5174\" \"wait-on http://127.0.0.1:5174 && electron apps/hub\"",
     "dev:rush-run": "vite --config apps/rush-run/vite.config.js --host 127.0.0.1 --port 5175",
+    "preview": "npm run mongo:up && wait-on tcp:127.0.0.1:27017 && concurrently -n api,web,rush -c cyan,magenta,green \"npm run preview:api\" \"npm run preview:web\" \"npm run preview:rush-run\"",
+    "preview:api": "cross-env PORT=3100 MONGO_URI=mongodb://127.0.0.1:27017/nexus_arcade_preview API_BASE_URL=http://127.0.0.1:3100 OAUTH_ISSUER=http://127.0.0.1:3100 node apps/api/src/server.js",
+    "preview:web": "cross-env VITE_API_BASE_URL=http://127.0.0.1:3100 vite --config apps/web/vite.config.js --host 127.0.0.1 --port 5173",
+    "preview:hub": "cross-env API_BASE_URL=http://127.0.0.1:3100 RUSH_RUN_WEB_URL=http://127.0.0.1:5175 concurrently -n hub-vite,electron -c cyan,yellow \"vite --config apps/hub/vite.config.js --host 127.0.0.1 --port 5174\" \"wait-on http://127.0.0.1:5174 && electron apps/hub\"",
+    "preview:rush-run": "vite --config apps/rush-run/vite.config.js --host 127.0.0.1 --port 5175",
+    "preview:smoke": "node scripts/preview-smoke.mjs",
     "mongo:up": "docker compose up -d mongo",
     "mongo:down": "docker compose down",
+    "mongo:test:up": "cross-env MONGO_PORT=27018 docker compose -p nexus-arcade-test up -d mongo",
+    "mongo:test:down": "cross-env MONGO_PORT=27018 docker compose -p nexus-arcade-test down",
     "test": "node --test packages/shared/tests/*.test.js apps/api/src/tests/*.test.js apps/web/src/*.test.js apps/hub/src/tests/*.test.js apps/rush-run/src/*.test.js",
+    "test:integration": "cross-env MONGO_URI=mongodb://127.0.0.1:27017/nexus_arcade_test node --test apps/api/src/integration-tests/*.test.js",
+    "test:integration:docker": "npm run mongo:test:up && wait-on tcp:127.0.0.1:27018 && cross-env MONGO_URI=mongodb://127.0.0.1:27018/nexus_arcade_test node --test apps/api/src/integration-tests/*.test.js",
     "build": "node --check apps/api/src/server.js && vite build --config apps/web/vite.config.js && vite build --config apps/hub/vite.config.js && vite build --config apps/rush-run/vite.config.js && node --check apps/hub/src/main/main.js",
-    "verify": "npm run test && npm run build"
+    "verify": "npm run test && npm run build",
+    "verify:docker": "npm run test:integration:docker && npm run verify",
+    "repo:large-files": "node scripts/check-large-files.mjs"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.3.4",
@@ -35,6 +47,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
+    "cross-env": "^7.0.3",
     "wait-on": "^8.0.1"
   }
 }

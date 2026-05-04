@@ -374,6 +374,41 @@ input {
   box-shadow: inset 0 0 36px rgba(0, 229, 255, 0.1);
 }
 
+.avatar-canvas.frame-frame-neon-start {
+  border-color: var(--primary);
+  box-shadow:
+    inset 0 0 36px rgba(0, 229, 255, 0.1),
+    0 0 0 2px rgba(0, 229, 255, 0.18);
+}
+
+.avatar-canvas.frame-frame-laser-chrome {
+  border-color: var(--secondary);
+  box-shadow:
+    inset 0 0 36px rgba(255, 46, 209, 0.12),
+    0 0 0 2px rgba(246, 248, 255, 0.32),
+    0 0 24px rgba(255, 46, 209, 0.18);
+}
+
+.avatar-canvas.frame-frame-sunset-grid {
+  border-color: var(--accent);
+  background:
+    linear-gradient(rgba(255, 212, 0, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 46, 209, 0.1) 1px, transparent 1px),
+    #08101e;
+  background-size: 36px 36px;
+  box-shadow:
+    inset 0 0 42px rgba(255, 212, 0, 0.12),
+    0 0 0 2px rgba(255, 212, 0, 0.18);
+}
+
+.avatar-canvas.frame-frame-vector-vip {
+  border-color: #25ff9a;
+  box-shadow:
+    inset 0 0 38px rgba(37, 255, 154, 0.13),
+    0 0 0 2px rgba(139, 44, 255, 0.36),
+    0 0 26px rgba(37, 255, 154, 0.18);
+}
+
 .avatar-editor {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

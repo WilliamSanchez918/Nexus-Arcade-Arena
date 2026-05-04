@@ -339,12 +339,21 @@ const avatarPoseProfiles = Object.freeze({
   victory: { lean: 0.02, leftArm: -2.35, rightArm: 2.35, leftLeg: -0.09, rightLeg: 0.09, handY: -0.72 }
 });
 
+const avatarHeadProfiles = Object.freeze({
+  head_spark: { scale: [0.92, 0.96, 0.82], shape: 'round' },
+  head_neon_human: { scale: [0.82, 1.08, 0.72], shape: 'oval' },
+  head_arcade_star: { scale: [0.92, 0.98, 0.72], shape: 'faceted' },
+  head_rebel_cut: { scale: [0.78, 1.02, 0.68], shape: 'angular' },
+  head_cyberhawk: { scale: [0.74, 1.18, 0.68], shape: 'tall' }
+});
+
 function AvatarModel({ avatar = defaultAvatar }) {
   const groupRef = useRef(null);
   const primary = avatar.primaryColor || defaultAvatar.primaryColor;
   const secondary = avatar.secondaryColor || defaultAvatar.secondaryColor;
   const accent = avatar.accentColor || defaultAvatar.accentColor;
   const profile = avatarBodyProfiles[avatar.bodyId] || avatarBodyProfiles.body_neon_hero;
+  const headProfile = avatarHeadProfiles[avatar.headId] || avatarHeadProfiles.head_neon_human;
   const pose = avatarPoseProfiles[avatar.poseId] || avatarPoseProfiles.idle;
   const isAndroid = avatar.bodyType === 'android' || avatar.bodyId === 'body_android_prime';
   const isGuardian = avatar.bodyType === 'guardian' || avatar.bodyId === 'body_guardian_frame';
@@ -356,10 +365,13 @@ function AvatarModel({ avatar = defaultAvatar }) {
   const visorGlow = ['visor_prism', 'visor_mirrorwrap'].includes(avatar.visorId) ? accent : secondary;
   const trailColor = avatar.trailId === 'trail_fireline' || avatar.trailId === 'trail_comet' ? accent : primary;
   const hairId = avatar.hairId || (avatar.helmetId === 'helmet_viper_hair' ? 'hair_viper_sweep' : avatar.helmetId === 'helmet_mohawk_glow' ? 'hair_glowhawk' : 'hair_none');
+  const hasHelmet = avatar.helmetId && avatar.helmetId !== 'helmet_none';
+  const visibleHairId = hasHelmet ? 'hair_none' : hairId;
+  const hairColor = hairId === 'hair_glowhawk' ? accent : hairId === 'hair_viper_sweep' ? '#0b0d16' : hairId === 'hair_laser_mullet' ? '#171019' : hairId === 'hair_midnight_curls' ? '#13081f' : '#20141b';
   const bootId = avatar.bootsId || defaultAvatar.bootsId;
   const bootColor = bootId === 'boots_chrome_stompers' ? '#c8d5ef' : bootId === 'boots_combat_neon' ? '#080d19' : '#101827';
   const rootTilt = pose.lean;
-  const shoulderX = profile.shoulder * 1.08;
+  const shoulderX = profile.shoulder * 0.78;
   const legX = profile.stance;
   const armRadius = 0.075 * profile.bulk;
   const legRadius = 0.095 * profile.bulk;
@@ -559,6 +571,10 @@ function AvatarModel({ avatar = defaultAvatar }) {
 
       {[-1, 1].map((side) => (
         <group key={side} position={[side * shoulderX, 0.42, 0]} rotation={[0, 0, side < 0 ? pose.leftArm : pose.rightArm]}>
+          <mesh position={[0, 0, 0.01]}>
+            <sphereGeometry args={[0.14 * profile.bulk, 18, 12]} />
+            <meshStandardMaterial color={secondary} roughness={0.32} metalness={0.22} />
+          </mesh>
           <mesh position={[0, -0.27 * profile.armLength, 0]}>
             <capsuleGeometry args={[armRadius, 0.42 * profile.armLength, 8, 12]} />
             <meshStandardMaterial color={secondary} roughness={0.34} metalness={0.2} />
@@ -615,24 +631,132 @@ function AvatarModel({ avatar = defaultAvatar }) {
         <cylinderGeometry args={[0.12 * profile.headScale, 0.1 * profile.headScale, 0.18, 16]} />
         <meshStandardMaterial color={skinColor} roughness={0.32} metalness={0.18} />
       </mesh>
-      <mesh position={[0, 1.08, 0]} scale={[0.84, 1.08, 0.72]}>
-        <sphereGeometry args={[0.31 * profile.headScale, 32, 22]} />
-        <meshStandardMaterial color={skinColor} roughness={0.22} metalness={avatar.headId === 'head_arcade_star' ? 0.46 : 0.2} />
-      </mesh>
-      <mesh position={[0, 1.06, 0.24]}>
-        <boxGeometry args={[0.1, 0.08, 0.12]} />
+      <group position={[0, 1.08, 0]} scale={headProfile.scale.map((value) => value * profile.headScale)}>
+        {headProfile.shape === 'faceted' ? (
+          <mesh>
+            <dodecahedronGeometry args={[0.33, 0]} />
+            <meshStandardMaterial color={skinColor} roughness={0.2} metalness={0.34} />
+          </mesh>
+        ) : null}
+        {headProfile.shape === 'angular' ? (
+          <mesh>
+            <boxGeometry args={[0.48, 0.58, 0.4]} />
+            <meshStandardMaterial color={skinColor} roughness={0.25} metalness={0.16} />
+          </mesh>
+        ) : null}
+        {headProfile.shape === 'round' || headProfile.shape === 'oval' || headProfile.shape === 'tall' ? (
+          <mesh>
+            <sphereGeometry args={[0.31, 32, 22]} />
+            <meshStandardMaterial color={skinColor} roughness={0.22} metalness={0.18} />
+          </mesh>
+        ) : null}
+      </group>
+      <mesh position={[0, 1.06, 0.25]}>
+        <boxGeometry args={[avatar.headId === 'head_rebel_cut' ? 0.13 : 0.1, 0.08, 0.12]} />
         <meshStandardMaterial color={skinColor} roughness={0.28} />
       </mesh>
 
+      {!hasHelmet && visibleHairId === 'hair_glowhawk' ? [-0.16, 0, 0.16].map((z) => (
+        <mesh key={z} position={[0, 1.36, z]}>
+          <boxGeometry args={[0.07, 0.44, 0.09]} />
+          <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.7} />
+        </mesh>
+      )) : null}
+      {!hasHelmet && visibleHairId === 'hair_short_crop' ? (
+        <mesh position={[0, 1.23, -0.02]} scale={[0.9, 0.38, 0.72]}>
+          <sphereGeometry args={[0.3, 20, 12]} />
+          <meshStandardMaterial color={hairColor} roughness={0.52} metalness={0.06} />
+        </mesh>
+      ) : null}
+      {!hasHelmet && visibleHairId === 'hair_side_part' ? (
+        <>
+          <mesh position={[-0.06, 1.28, -0.02]} scale={[1, 0.48, 0.74]}>
+            <sphereGeometry args={[0.3, 20, 12]} />
+            <meshStandardMaterial color={hairColor} roughness={0.5} metalness={0.08} />
+          </mesh>
+          <mesh position={[0.16, 1.26, 0.12]} rotation={[0, 0, -0.38]}>
+            <boxGeometry args={[0.16, 0.34, 0.08]} />
+            <meshStandardMaterial color={hairColor} emissive={accent} emissiveIntensity={0.1} roughness={0.46} />
+          </mesh>
+        </>
+      ) : null}
+      {!hasHelmet && visibleHairId === 'hair_viper_sweep' ? (
+        <mesh position={[0, 1.38, -0.02]} scale={[0.78, 1.1, 0.48]}>
+          <coneGeometry args={[0.26, 0.56, 5]} />
+          <meshStandardMaterial color={hairColor} emissive={accent} emissiveIntensity={0.24} roughness={0.5} />
+        </mesh>
+      ) : null}
+      {!hasHelmet && (visibleHairId === 'hair_laser_mullet' || visibleHairId === 'hair_classic_mullet') ? (
+        <>
+          <mesh position={[0, 1.29, -0.04]} scale={[1.02, 0.48, 0.72]}>
+            <sphereGeometry args={[0.29, 20, 14]} />
+            <meshStandardMaterial color={hairColor} emissive={visibleHairId === 'hair_laser_mullet' ? secondary : '#000000'} emissiveIntensity={visibleHairId === 'hair_laser_mullet' ? 0.18 : 0} roughness={0.5} />
+          </mesh>
+          <mesh position={[0, 1.06, -0.24]} scale={[0.86, 1, 0.4]}>
+            <capsuleGeometry args={[0.18, 0.38, 8, 12]} />
+            <meshStandardMaterial color={hairColor} roughness={0.5} />
+          </mesh>
+          {visibleHairId === 'hair_laser_mullet' ? (
+            <mesh position={[-0.1, 1.32, 0.22]} rotation={[0, 0, -0.18]}>
+              <boxGeometry args={[0.12, 0.42, 0.05]} />
+              <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.44} />
+            </mesh>
+          ) : null}
+        </>
+      ) : null}
+      {!hasHelmet && visibleHairId === 'hair_midnight_curls' ? [-0.24, -0.12, 0, 0.12, 0.24].map((x, index) => (
+        <mesh key={x} position={[x, 1.29 + (index % 2) * 0.04, 0.04]}>
+          <sphereGeometry args={[0.13, 16, 12]} />
+          <meshStandardMaterial color={hairColor} emissive={accent} emissiveIntensity={0.18} roughness={0.55} />
+        </mesh>
+      )) : null}
+
+      {hasHelmet ? (
+        <group position={[0, 1.1, 0]}>
+          <mesh scale={[0.92 * profile.headScale, 1.08 * profile.headScale, 0.78 * profile.headScale]}>
+            <sphereGeometry args={[0.35, 32, 20]} />
+            <meshStandardMaterial color={avatar.helmetId === 'helmet_vector' ? '#101827' : '#141a2d'} roughness={0.28} metalness={0.42} />
+          </mesh>
+          <mesh position={[0, 0.02, 0.29]} scale={[1, 0.6, 1]}>
+            <boxGeometry args={[0.5, 0.18, 0.06]} />
+            <meshStandardMaterial color={visorGlow} emissive={visorGlow} emissiveIntensity={0.42} metalness={0.32} roughness={0.18} transparent opacity={0.86} />
+          </mesh>
+          {avatar.helmetId === 'helmet_mohawk_glow' ? (
+            <mesh position={[0, 0.28, 0]} scale={[0.22, 1.15, 0.34]}>
+              <boxGeometry args={[0.28, 0.38, 0.18]} />
+              <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.58} roughness={0.35} />
+            </mesh>
+          ) : null}
+          {avatar.helmetId === 'helmet_bandana_laser' ? (
+            <mesh position={[0, 0.11, 0.32]} rotation={[0, 0, -0.12]}>
+              <boxGeometry args={[0.62, 0.08, 0.06]} />
+              <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.34} />
+            </mesh>
+          ) : null}
+          {avatar.helmetId === 'helmet_viper_hair' ? (
+            <mesh position={[0, 0.32, -0.03]} scale={[0.5, 0.95, 0.36]}>
+              <coneGeometry args={[0.22, 0.5, 5]} />
+              <meshStandardMaterial color="#0b0d16" emissive={accent} emissiveIntensity={0.26} roughness={0.42} />
+            </mesh>
+          ) : null}
+          {avatar.helmetId === 'helmet_champion_crown' ? [-0.2, 0, 0.2].map((x) => (
+            <mesh key={x} position={[x, 0.36, 0]}>
+              <coneGeometry args={[0.075, 0.22, 5]} />
+              <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.55} />
+            </mesh>
+          )) : null}
+        </group>
+      ) : null}
+
       {avatar.visorId === 'visor_terminus' ? (
         [-0.11, 0.11].map((x) => (
-          <mesh key={x} position={[x, 1.12, 0.27]}>
+          <mesh key={x} position={[x, 1.12, 0.31]}>
             <boxGeometry args={[0.12, 0.055, 0.045]} />
             <meshStandardMaterial color="#ff4545" emissive="#ff4545" emissiveIntensity={0.95} />
           </mesh>
         ))
       ) : (
-        <group position={[0, 1.12, 0.27]}>
+        <group position={[0, 1.12, 0.31]}>
           <mesh>
             <boxGeometry args={[avatar.visorId === 'visor_mirrorwrap' ? 0.58 : 0.48, avatar.visorId === 'visor_shutter' ? 0.15 : 0.1, 0.055]} />
             <meshStandardMaterial color={avatar.visorId === 'visor_clear' ? '#d7fbff' : visorGlow} emissive={visorGlow} emissiveIntensity={0.44} transparent opacity={avatar.visorId === 'visor_clear' ? 0.72 : 0.86} metalness={0.36} roughness={0.18} />
@@ -645,65 +769,6 @@ function AvatarModel({ avatar = defaultAvatar }) {
           )) : null}
         </group>
       )}
-
-      {avatar.helmetId === 'helmet_vector' ? (
-        <mesh position={[0, 1.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.3 * profile.headScale, 0.028, 10, 48]} />
-          <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.42} />
-        </mesh>
-      ) : null}
-      {hairId === 'hair_glowhawk' ? [-0.16, 0, 0.16].map((z) => (
-        <mesh key={z} position={[0, 1.35, z]}>
-          <boxGeometry args={[0.07, 0.44, 0.09]} />
-          <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.7} />
-        </mesh>
-      )) : null}
-      {avatar.helmetId === 'helmet_bandana_laser' ? (
-        <>
-          <mesh position={[0, 1.22, 0.25]}>
-            <boxGeometry args={[0.62, 0.075, 0.055]} />
-            <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.32} />
-          </mesh>
-          <mesh position={[0.32, 1.18, -0.05]} rotation={[0, 0, -0.62]}>
-            <boxGeometry args={[0.1, 0.36, 0.045]} />
-            <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.22} />
-          </mesh>
-        </>
-      ) : null}
-      {hairId === 'hair_viper_sweep' ? (
-        <mesh position={[0, 1.38, -0.02]} scale={[0.78, 1.1, 0.48]}>
-          <coneGeometry args={[0.26, 0.56, 5]} />
-          <meshStandardMaterial color="#0b0d16" emissive={accent} emissiveIntensity={0.24} roughness={0.5} />
-        </mesh>
-      ) : null}
-      {hairId === 'hair_laser_mullet' ? (
-        <>
-          <mesh position={[0, 1.3, -0.08]} scale={[1.08, 0.52, 0.72]}>
-            <sphereGeometry args={[0.28, 20, 14]} />
-            <meshStandardMaterial color="#0b0d16" emissive={secondary} emissiveIntensity={0.18} roughness={0.48} />
-          </mesh>
-          <mesh position={[-0.1, 1.32, 0.22]} rotation={[0, 0, -0.18]}>
-            <boxGeometry args={[0.12, 0.42, 0.05]} />
-            <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.44} />
-          </mesh>
-        </>
-      ) : null}
-      {hairId === 'hair_midnight_curls' ? [-0.24, -0.12, 0, 0.12, 0.24].map((x, index) => (
-        <mesh key={x} position={[x, 1.29 + (index % 2) * 0.04, 0.04]}>
-          <sphereGeometry args={[0.13, 16, 12]} />
-          <meshStandardMaterial color="#13081f" emissive={accent} emissiveIntensity={0.18} roughness={0.55} />
-        </mesh>
-      )) : null}
-      {avatar.helmetId === 'helmet_champion_crown' ? (
-        <group position={[0, 1.4, 0]}>
-          {[-0.2, 0, 0.2].map((x) => (
-            <mesh key={x} position={[x, 0, 0]}>
-              <coneGeometry args={[0.075, 0.28, 5]} />
-              <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.55} />
-            </mesh>
-          ))}
-        </group>
-      ) : null}
 
       {avatar.trailId !== 'trail_none' ? (
         <group position={[0, -1.48, -0.12]}>
@@ -724,8 +789,9 @@ function AvatarModel({ avatar = defaultAvatar }) {
 }
 
 function AvatarPreview3D({ avatar }) {
+  const frameClass = `frame-${(avatar.frameId || defaultAvatar.frameId).replaceAll('_', '-')}`;
   return (
-    <div className="avatar-canvas" style={{ '--primary': avatar.primaryColor, '--secondary': avatar.secondaryColor }}>
+    <div className={`avatar-canvas ${frameClass}`} style={{ '--primary': avatar.primaryColor, '--secondary': avatar.secondaryColor, '--accent': avatar.accentColor || defaultAvatar.accentColor }}>
       <Canvas camera={{ position: [0, 0.45, 4.55], fov: 41 }} dpr={[1, 1.5]} gl={{ antialias: true }}>
         <color attach="background" args={['#08101e']} />
         <ambientLight intensity={0.8} />

@@ -55,6 +55,17 @@ test('web game URL embeds launch payload and callback details', () => {
         playerId: 'guest',
         displayName: 'GUEST',
         avatar: {},
+        avatarRuntime: {
+          manifestVersion: 'nexus-avatar-manifest/v1',
+          target: '2d',
+          avatarId: 'guest_bot',
+          colors: { primary: '#00E5FF', secondary: '#FF2ED1', accent: '#FFD400' },
+          morphology: { bodyType: 'hero', bodyId: 'body_neon_hero', headId: 'head_neon_human' },
+          equipment: { body: 'body_neon_hero' },
+          animation: { poseId: 'power', emoteId: 'emote_wave', animationSet: 'hero_idle' },
+          addons: [],
+          compatibility: { supportedSlots: ['body'], supportedTargets: ['2d', '3d'] }
+        },
         level: 1,
         isGuest: true
       }]

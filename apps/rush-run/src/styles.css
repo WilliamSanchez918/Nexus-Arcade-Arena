@@ -46,6 +46,15 @@ body {
   font-weight: 800;
 }
 
+#hud em {
+  display: block;
+  margin-top: 4px;
+  color: var(--player-accent);
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
 .hud-stats {
   display: flex;
   gap: 12px;

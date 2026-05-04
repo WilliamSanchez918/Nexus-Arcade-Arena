@@ -76,7 +76,7 @@ export async function signResultPayload(payload, secret) {
   return [...new Uint8Array(signature)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
-export async function buildSignedResult({ launchPayload, score, durationSeconds, boosts, collisions, callbackSecret }) {
+export async function buildSignedResult({ launchPayload, score, durationSeconds, boosts, collisions, avatar, callbackSecret }) {
   const startedAt = new Date(Date.now() - durationSeconds * 1000).toISOString();
   const endedAt = new Date().toISOString();
   const unsigned = GameResultPayloadSchema.parse({
@@ -95,9 +95,13 @@ export async function buildSignedResult({ launchPayload, score, durationSeconds,
       displayName: player.displayName,
       score: Math.max(0, Math.round(score - index * 200)),
       result: index === 0 ? 'win' : 'finished',
-      telemetry: { boosts, collisions }
+      telemetry: {
+        boosts,
+        collisions,
+        avatar: index === 0 ? avatar : undefined
+      }
     })),
-    telemetry: { source: 'rush-run-web', boosts, collisions },
+    telemetry: { source: 'rush-run-web', boosts, collisions, avatar },
     nonce: crypto.randomUUID()
   });
 

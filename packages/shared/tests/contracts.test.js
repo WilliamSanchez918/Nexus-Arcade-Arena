@@ -38,6 +38,8 @@ test('game launch payload validates the Godot handoff contract', () => {
   });
 
   assert.equal(payload.players[0].displayName, 'GUEST');
+  assert.equal(payload.players[0].avatarRuntime.manifestVersion, 'nexus-avatar-manifest/v1');
+  assert.equal(payload.players[0].avatarRuntime.target, '2d');
 });
 
 test('game result signature is stable and excludes the signature field', () => {

@@ -226,7 +226,8 @@ export const CabinetLoginSessionSchema = z.object({
 });
 
 export const GamePlayerPayloadSchema = PublicPlayerSchema.extend({
-  slot: PlayerSlotSchema
+  slot: PlayerSlotSchema,
+  avatarRuntime: AvatarRuntimeManifestSchema.optional()
 });
 
 export const GameLaunchPayloadSchema = z.object({
@@ -440,11 +441,13 @@ export function publicPlayerFromProfile(profile, overrides = {}) {
 }
 
 export function guestPlayer(slot = 'P1') {
+  const avatar = { ...defaultAvatar, avatarId: 'guest_bot', badgeId: 'guest' };
   return GamePlayerPayloadSchema.parse({
     slot,
     playerId: 'guest',
     displayName: 'GUEST',
-    avatar: { ...defaultAvatar, avatarId: 'guest_bot', badgeId: 'guest' },
+    avatar,
+    avatarRuntime: exportAvatarRuntimeManifest(avatar, { target: '2d' }),
     level: 1,
     isGuest: true
   });

@@ -259,6 +259,8 @@ test('Player Passport pilot flow works against Mongo', async () => {
     })
   });
   assert.equal(start.response.status, 201);
+  assert.equal(start.body.launchPayload.players[0].avatarRuntime.manifestVersion, 'nexus-avatar-manifest/v1');
+  assert.equal(start.body.launchPayload.players[0].avatarRuntime.equipment.body, 'body_street_legend');
 
   const startedAt = new Date(Date.now() - 45_000).toISOString();
   const endedAt = new Date().toISOString();

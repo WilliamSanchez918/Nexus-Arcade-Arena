@@ -89,3 +89,7 @@ Games should consume `exportAvatarRuntimeManifest()` from `nexus-arcade-shared` 
 - `compatibility` - supported slots and render targets.
 
 2D games can map the same equipment IDs to sprite layers; 3D games can map them to rig attachments or GLB parts. The manifest is read-only game input and should not be mutated by a game runtime.
+
+Rush Run now receives this same contract in `launchPayload.players[].avatarRuntime`. The API still includes the public `player.avatar` manifest for backward compatibility, but game renderers should prefer `avatarRuntime` and fall back to `exportAvatarRuntimeManifest(player.avatar)` only when replaying older payloads.
+
+Signed Rush Run results include avatar contract telemetry under `telemetry.avatar`, which gives pilot operators a stable way to confirm which avatar manifest version, equipment IDs, and emote set were used for a submitted score.

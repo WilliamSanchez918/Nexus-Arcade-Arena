@@ -41,6 +41,8 @@ Set `GODOT_RUSH_RUN_PATH` to the exported Rush Run executable. The Hub passes:
 
 If no executable path is configured, service tests use `tools/game-simulator` to validate the same contract without Godot installed.
 
+The web Rush Run preview consumes `launchPayload.players[].avatarRuntime`, renders the runner from the versioned Passport avatar contract, and includes avatar contract telemetry in signed score results. Godot builds should follow the same runtime manifest instead of coupling to cabinet-only player state.
+
 ## Player Passport integration boundary
 
 Other systems should integrate through `packages/shared` schemas and the `/api/player`, `/api/arcade`, `/api/auth`, `/oauth`, and `/api/leaderboards` APIs. Cabinet-specific behavior stays in `apps/hub`; reusable identity, avatar, progression, session, auth-client, token, and leaderboard contracts live in shared/API code.

@@ -1,4 +1,5 @@
 import {
+  exportAvatarRuntimeManifest,
   GameLaunchPayloadSchema,
   GameResultPayloadSchema,
   guestPlayer
@@ -24,7 +25,8 @@ async function hydrateLaunchPlayer(input) {
   return {
     ...toPublicPlayer(profile),
     playerId: String(profile._id),
-    slot: input.slot
+    slot: input.slot,
+    avatarRuntime: exportAvatarRuntimeManifest(profile.avatar, { target: '2d' })
   };
 }
 

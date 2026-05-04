@@ -22,6 +22,7 @@ test('avatar manifests provide V1 defaults', () => {
   assert.equal(avatar.hairId, 'hair_glowhawk');
   assert.equal(avatar.bootsId, 'boots_grid_runners');
   assert.equal(avatar.trailId, 'trail_neon');
+  assert.equal(avatar.emoteId, 'emote_wave');
   assert.equal(avatar.addons.length, 0);
 });
 

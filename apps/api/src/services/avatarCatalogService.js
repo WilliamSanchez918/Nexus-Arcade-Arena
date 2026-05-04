@@ -882,6 +882,84 @@ export const avatarCatalogItems = Object.freeze([
     asset2d: { pose: 'street' },
     asset3d: { pose: 'street' },
     sortOrder: 204
+  },
+  {
+    cosmeticId: 'emote_wave',
+    type: 'emote',
+    slot: 'emote',
+    title: 'Neon Wave',
+    description: 'Friendly greeting emote for returning-player and cabinet welcome moments.',
+    rarity: 'common',
+    colorMasks: ['secondary'],
+    asset2d: { emote: 'wave' },
+    asset3d: { emote: 'wave', triggers: ['manual', 'cabinet.greeting'] },
+    preview: { swatch: '#FF2ED1' },
+    sortOrder: 210
+  },
+  {
+    cosmeticId: 'emote_power_flex',
+    type: 'emote',
+    slot: 'emote',
+    title: 'Power Flex',
+    description: 'Score-screen flex for wins, personal bests, and challenge clears.',
+    rarity: 'common',
+    colorMasks: ['accent'],
+    asset2d: { emote: 'power-flex' },
+    asset3d: { emote: 'power-flex', triggers: ['manual', 'score.personal_best'] },
+    preview: { swatch: '#FFD400' },
+    sortOrder: 212
+  },
+  {
+    cosmeticId: 'emote_air_guitar',
+    type: 'emote',
+    slot: 'emote',
+    title: 'Air Guitar',
+    description: 'Arcade victory emote with a neon guitar prop.',
+    rarity: 'common',
+    colorMasks: ['primary', 'secondary'],
+    asset2d: { emote: 'air-guitar' },
+    asset3d: { emote: 'air-guitar', triggers: ['manual', 'game.victory'] },
+    preview: { swatch: '#00E5FF' },
+    sortOrder: 214
+  },
+  {
+    cosmeticId: 'emote_dance_break',
+    type: 'emote',
+    slot: 'emote',
+    title: 'Dance Break',
+    description: 'Loopable celebratory dance for lobby and attract moments.',
+    rarity: 'rare',
+    colorMasks: ['primary', 'accent'],
+    asset2d: { emote: 'dance-break' },
+    asset3d: { emote: 'dance-break', triggers: ['manual', 'lobby.idle'] },
+    preview: { swatch: '#25FF9A' },
+    sortOrder: 216
+  },
+  {
+    cosmeticId: 'emote_high_score',
+    type: 'emote',
+    slot: 'emote',
+    title: 'High Score Pop',
+    description: 'Leaderboard celebration with a neon star pop.',
+    rarity: 'rare',
+    colorMasks: ['accent'],
+    asset2d: { emote: 'high-score-pop' },
+    asset3d: { emote: 'high-score-pop', triggers: ['manual', 'leaderboard.top_ten'] },
+    preview: { swatch: '#8B2CFF' },
+    sortOrder: 218
+  },
+  {
+    cosmeticId: 'emote_thumbs_up',
+    type: 'emote',
+    slot: 'emote',
+    title: 'Thumbs Up',
+    description: 'Quick positive emote for co-op ready checks and game-end screens.',
+    rarity: 'common',
+    colorMasks: ['primary'],
+    asset2d: { emote: 'thumbs-up' },
+    asset3d: { emote: 'thumbs-up', triggers: ['manual', 'coop.ready'] },
+    preview: { swatch: '#00E5FF' },
+    sortOrder: 220
   }
 ].map((item) => CosmeticCatalogItemSchema.parse(item)));
 
@@ -905,7 +983,8 @@ const avatarFieldBySlot = Object.freeze({
   aura: 'auraId',
   frame: 'frameId',
   badge: 'badgeId',
-  pose: 'poseId'
+  pose: 'poseId',
+  emote: 'emoteId'
 });
 
 const bodyTypeByCosmeticId = Object.freeze({
@@ -923,6 +1002,9 @@ function avatarValueForSlot(slot, cosmeticId) {
   }
   if (slot === 'pose') {
     return cosmeticId.replace(/^pose_/, '');
+  }
+  if (slot === 'emote') {
+    return cosmeticId;
   }
   return cosmeticId;
 }
@@ -942,7 +1024,8 @@ export function defaultEquippedFromAvatar(avatarInput = defaultAvatar) {
     aura: avatar.auraId,
     frame: avatar.frameId,
     badge: `badge_${avatar.badgeId}`,
-    pose: `pose_${avatar.poseId}`
+    pose: `pose_${avatar.poseId}`,
+    emote: avatar.emoteId
   };
 }
 

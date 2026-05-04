@@ -264,7 +264,8 @@ const avatarSlotLabels = Object.freeze({
   aura: 'Aura',
   frame: 'Frame',
   badge: 'Badge',
-  pose: 'Pose'
+  pose: 'Pose',
+  emote: 'Emote'
 });
 
 function groupCatalogItems(items = []) {
@@ -289,7 +290,8 @@ const avatarFieldBySlot = Object.freeze({
   aura: 'auraId',
   frame: 'frameId',
   badge: 'badgeId',
-  pose: 'poseId'
+  pose: 'poseId',
+  emote: 'emoteId'
 });
 
 const bodyTypeByCosmeticId = Object.freeze({
@@ -320,6 +322,9 @@ function avatarValueForSlot(slot, cosmeticId) {
   if (slot === 'pose') {
     return cosmeticId.replace(/^pose_/, '');
   }
+  if (slot === 'emote') {
+    return cosmeticId;
+  }
   return cosmeticId;
 }
 
@@ -337,6 +342,40 @@ const avatarPoseProfiles = Object.freeze({
   power: { lean: 0, leftArm: -0.42, rightArm: 0.42, leftLeg: -0.16, rightLeg: 0.16, handY: -0.9 },
   street: { lean: -0.08, leftArm: -0.08, rightArm: 0.48, leftLeg: -0.03, rightLeg: 0.13, handY: -0.86 },
   victory: { lean: 0.02, leftArm: -2.35, rightArm: 2.35, leftLeg: -0.09, rightLeg: 0.09, handY: -0.72 }
+});
+
+const avatarEmoteProfiles = Object.freeze({
+  emote_none: { pose: {}, motion: 'idle' },
+  emote_wave: {
+    pose: { lean: 0.02, leftArm: -0.18, rightArm: 2.45, rightLeg: 0.04, handY: -0.68 },
+    motion: 'wave',
+    accent: 'spark'
+  },
+  emote_power_flex: {
+    pose: { lean: 0, leftArm: -1.95, rightArm: 1.95, leftLeg: -0.18, rightLeg: 0.18, handY: -0.66 },
+    motion: 'bounce',
+    accent: 'burst'
+  },
+  emote_air_guitar: {
+    pose: { lean: -0.12, leftArm: -0.78, rightArm: 1.08, leftLeg: -0.2, rightLeg: 0.14, handY: -0.72 },
+    motion: 'strum',
+    prop: 'guitar'
+  },
+  emote_dance_break: {
+    pose: { lean: 0.08, leftArm: -0.72, rightArm: 0.84, leftLeg: -0.24, rightLeg: 0.24, handY: -0.78 },
+    motion: 'dance',
+    accent: 'floor'
+  },
+  emote_high_score: {
+    pose: { lean: 0.02, leftArm: -2.28, rightArm: 2.28, leftLeg: -0.1, rightLeg: 0.1, handY: -0.64 },
+    motion: 'pop',
+    accent: 'star'
+  },
+  emote_thumbs_up: {
+    pose: { lean: 0.02, leftArm: -0.12, rightArm: 2.08, rightLeg: 0.1, handY: -0.7 },
+    motion: 'thumbs',
+    accent: 'spark'
+  }
 });
 
 const avatarHeadProfiles = Object.freeze({
@@ -554,14 +593,18 @@ function HelmetModel({ helmetId, profile, primary, secondary, accent, visorGlow 
   );
 }
 
-function AvatarModel({ avatar = defaultAvatar }) {
+function AvatarModel({ avatar = defaultAvatar, emotePreview = null }) {
   const groupRef = useRef(null);
+  const armRefs = useRef({});
   const primary = avatar.primaryColor || defaultAvatar.primaryColor;
   const secondary = avatar.secondaryColor || defaultAvatar.secondaryColor;
   const accent = avatar.accentColor || defaultAvatar.accentColor;
   const profile = avatarBodyProfiles[avatar.bodyId] || avatarBodyProfiles.body_neon_hero;
   const headProfile = avatarHeadProfiles[avatar.headId] || avatarHeadProfiles.head_neon_human;
-  const pose = avatarPoseProfiles[avatar.poseId] || avatarPoseProfiles.idle;
+  const basePose = avatarPoseProfiles[avatar.poseId] || avatarPoseProfiles.idle;
+  const activeEmoteId = emotePreview?.id || 'emote_none';
+  const activeEmote = avatarEmoteProfiles[activeEmoteId] || avatarEmoteProfiles.emote_none;
+  const pose = { ...basePose, ...activeEmote.pose };
   const isAndroid = avatar.bodyType === 'android' || avatar.bodyId === 'body_android_prime';
   const isGuardian = avatar.bodyType === 'guardian' || avatar.bodyId === 'body_guardian_frame';
   const torsoColor = isAndroid ? '#7984a9' : '#111827';
@@ -595,9 +638,21 @@ function AvatarModel({ avatar = defaultAvatar }) {
   const bootScale = bootId === 'boots_chrome_stompers' ? 1.22 : bootId === 'boots_combat_neon' ? 1.12 : 1;
 
   useFrame((state, delta) => {
+    const phase = state.clock.elapsedTime;
     if (groupRef.current) {
-      groupRef.current.rotation.y += delta * 0.24;
-      groupRef.current.position.y = Math.sin(state.clock.elapsedTime * 1.7) * 0.035;
+      groupRef.current.rotation.y += delta * (activeEmote.motion === 'dance' ? 0.48 : 0.24);
+      groupRef.current.position.y = Math.sin(phase * (activeEmote.motion === 'bounce' ? 4.4 : 1.7)) * (activeEmote.motion === 'bounce' ? 0.07 : 0.035);
+    }
+    if (armRefs.current[-1]) {
+      const danceOffset = activeEmote.motion === 'dance' ? Math.sin(phase * 5.2) * 0.32 : 0;
+      const strumOffset = activeEmote.motion === 'strum' ? Math.sin(phase * 7.4) * 0.18 : 0;
+      armRefs.current[-1].rotation.z = pose.leftArm - danceOffset - strumOffset;
+    }
+    if (armRefs.current[1]) {
+      const waveOffset = activeEmote.motion === 'wave' || activeEmote.motion === 'thumbs' ? Math.sin(phase * 7.2) * 0.28 : 0;
+      const danceOffset = activeEmote.motion === 'dance' ? Math.cos(phase * 5.2) * 0.34 : 0;
+      const strumOffset = activeEmote.motion === 'strum' ? Math.sin(phase * 8.6) * 0.34 : 0;
+      armRefs.current[1].rotation.z = pose.rightArm + waveOffset + danceOffset + strumOffset;
     }
   });
 
@@ -621,6 +676,58 @@ function AvatarModel({ avatar = defaultAvatar }) {
               <meshBasicMaterial color={secondary} transparent opacity={0.38} />
             </mesh>
           )) : null}
+        </group>
+      ) : null}
+
+      {activeEmote.accent === 'floor' ? (
+        <group position={[0, -1.48, 0]}>
+          {[0.42, 0.62, 0.82].map((radius, index) => (
+            <mesh key={radius} rotation={[Math.PI / 2, 0, index * 0.4]}>
+              <torusGeometry args={[radius, 0.01, 8, 56]} />
+              <meshBasicMaterial color={index % 2 ? secondary : primary} transparent opacity={0.34} />
+            </mesh>
+          ))}
+        </group>
+      ) : null}
+
+      {activeEmote.accent === 'star' || activeEmote.accent === 'burst' ? (
+        <group position={[0, 1.94, 0.05]}>
+          {[0, 0.78].map((rotation) => (
+            <mesh key={rotation} rotation={[0, 0, rotation]}>
+              <boxGeometry args={[0.1, 0.38, 0.035]} />
+              <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.72} roughness={0.24} />
+            </mesh>
+          ))}
+          <mesh>
+            <sphereGeometry args={[0.08, 16, 10]} />
+            <meshStandardMaterial color={primary} emissive={primary} emissiveIntensity={0.55} />
+          </mesh>
+        </group>
+      ) : null}
+
+      {activeEmote.accent === 'spark' ? (
+        [0.16, 0.28, 0.4].map((offset, index) => (
+          <mesh key={offset} position={[0.38 + offset * 0.24, 1.1 + offset, 0.2]} scale={[1 - index * 0.16, 1 - index * 0.16, 1]}>
+            <sphereGeometry args={[0.035, 10, 8]} />
+            <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.75} />
+          </mesh>
+        ))
+      ) : null}
+
+      {activeEmote.prop === 'guitar' ? (
+        <group position={[0.05, -0.02, 0.43]} rotation={[0, 0, -0.68]}>
+          <mesh>
+            <boxGeometry args={[0.72, 0.12, 0.06]} />
+            <meshStandardMaterial color={secondary} emissive={secondary} emissiveIntensity={0.28} roughness={0.32} metalness={0.28} />
+          </mesh>
+          <mesh position={[-0.32, -0.03, 0]}>
+            <boxGeometry args={[0.24, 0.28, 0.07]} />
+            <meshStandardMaterial color={primary} emissive={primary} emissiveIntensity={0.24} roughness={0.34} />
+          </mesh>
+          <mesh position={[0.42, 0, 0]}>
+            <boxGeometry args={[0.18, 0.1, 0.065]} />
+            <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.2} />
+          </mesh>
         </group>
       ) : null}
 
@@ -802,7 +909,16 @@ function AvatarModel({ avatar = defaultAvatar }) {
       </group>
 
       {[-1, 1].map((side) => (
-        <group key={side} position={[side * shoulderX, 0.42, 0]} rotation={[0, 0, side < 0 ? pose.leftArm : pose.rightArm]}>
+        <group
+          key={side}
+          position={[side * shoulderX, 0.42, 0]}
+          ref={(node) => {
+            if (node) {
+              armRefs.current[side] = node;
+            }
+          }}
+          rotation={[0, 0, side < 0 ? pose.leftArm : pose.rightArm]}
+        >
           <mesh position={[0, 0, 0.01]}>
             <sphereGeometry args={[0.14 * profile.bulk, 18, 12]} />
             <meshStandardMaterial color={secondary} roughness={0.32} metalness={0.22} />
@@ -1028,7 +1144,7 @@ function AvatarModel({ avatar = defaultAvatar }) {
   );
 }
 
-function AvatarPreview3D({ avatar }) {
+function AvatarPreview3D({ avatar, emotePreview }) {
   const frameClass = `frame-${(avatar.frameId || defaultAvatar.frameId).replaceAll('_', '-')}`;
   return (
     <div className={`avatar-canvas ${frameClass}`} style={{ '--primary': avatar.primaryColor, '--secondary': avatar.secondaryColor, '--accent': avatar.accentColor || defaultAvatar.accentColor }}>
@@ -1038,7 +1154,7 @@ function AvatarPreview3D({ avatar }) {
         <directionalLight color="#ffffff" intensity={2.4} position={[3, 5, 4]} />
         <pointLight color={avatar.secondaryColor} intensity={3.2} position={[-2, 1.5, 2]} />
         <Suspense fallback={null}>
-          <AvatarModel avatar={avatar} />
+          <AvatarModel avatar={avatar} emotePreview={emotePreview} />
           <ContactShadows blur={2.8} far={4} opacity={0.32} position={[0, -1.82, 0]} scale={4} />
           <Environment preset="city" />
         </Suspense>
@@ -1069,6 +1185,7 @@ function ProfilePage() {
   const [saveState, setSaveState] = useState('');
   const [equipState, setEquipState] = useState('');
   const [activeAvatarSlot, setActiveAvatarSlot] = useState('body');
+  const [emotePreview, setEmotePreview] = useState(null);
   const profile = useAsyncData(() => (getPlayerToken() ? api.getProfile() : Promise.resolve(null)), []);
   const catalog = useAsyncData(() => api.getAvatarCatalog(), []);
   const inventory = useAsyncData(() => (getPlayerToken() ? api.getInventory() : Promise.resolve({ inventory: null })), []);
@@ -1103,10 +1220,17 @@ function ProfilePage() {
     try {
       const result = await api.equipCosmetic(slot, cosmeticId);
       setAvatar(result.player.avatar);
+      if (slot === 'emote') {
+        setEmotePreview({ id: cosmeticId, key: Date.now() });
+      }
       await Promise.all([profile.refresh(), inventory.refresh()]);
     } finally {
       setEquipState('');
     }
+  }
+
+  function triggerEmote(cosmeticId = avatar.emoteId || defaultAvatar.emoteId) {
+    setEmotePreview({ id: cosmeticId, key: Date.now() });
   }
 
   async function randomizeAvatar() {
@@ -1176,6 +1300,7 @@ function ProfilePage() {
   const equipped = inventory.data?.inventory?.equipped || {};
   const activeSlotItems = catalogBySlot[activeAvatarSlot] || [];
   const activeSlotLabel = avatarSlotLabels[activeAvatarSlot] || activeAvatarSlot;
+  const activePreviewEmote = emotePreview || (activeAvatarSlot === 'emote' ? { id: avatar.emoteId || defaultAvatar.emoteId } : null);
   return (
     <Shell>
       <section className="profile-grid">
@@ -1185,7 +1310,7 @@ function ProfilePage() {
               <h2><Box size={22} /> Avatar builder</h2>
               <span className="builder-tag">{avatar.bodyType || 'hero'} base</span>
             </div>
-            <AvatarPreview3D avatar={avatar} />
+            <AvatarPreview3D avatar={avatar} emotePreview={activePreviewEmote} />
           </div>
           <div className="builder-controls">
             <div className="customizer-header">
@@ -1215,7 +1340,13 @@ function ProfilePage() {
             <section className="inline-slot-panel">
               <div className="customizer-header">
                 <h3><Sparkles size={18} /> {activeSlotLabel}</h3>
-                <span>{activeSlotItems.length} options</span>
+                {activeAvatarSlot === 'emote' ? (
+                  <button className="icon-button" onClick={() => triggerEmote()} title="Play selected emote" type="button">
+                    <Sparkles size={18} />
+                  </button>
+                ) : (
+                  <span>{activeSlotItems.length} options</span>
+                )}
               </div>
               <div className="inline-catalog">
                 {activeSlotItems.length ? activeSlotItems.map((item) => (

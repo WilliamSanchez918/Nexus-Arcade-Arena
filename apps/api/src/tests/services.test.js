@@ -69,6 +69,7 @@ test('avatar catalog exposes starter equipment for game-safe manifests', () => {
   assert.equal(equipped.hair, 'hair_glowhawk');
   assert.equal(equipped.boots, 'boots_grid_runners');
   assert.equal(equipped.badge, 'badge_rookie');
+  assert.equal(equipped.emote, 'emote_wave');
   assert.equal(catalogIds.has(equipped.helmet), true);
   assert.equal(catalogIds.has('back_boost_pack'), true);
   assert.equal(catalogIds.has('body_street_legend'), true);
@@ -83,6 +84,8 @@ test('avatar catalog exposes starter equipment for game-safe manifests', () => {
   assert.equal(catalogIds.has('helmet_football_cage'), true);
   assert.equal(catalogIds.has('helmet_tactical_visor'), true);
   assert.equal(catalogIds.has('frame_vector_vip'), true);
+  assert.equal(catalogIds.has('emote_air_guitar'), true);
+  assert.equal(catalogIds.has('emote_high_score'), true);
   assert.equal(catalogIds.has('boots_hover_soles'), true);
 });
 

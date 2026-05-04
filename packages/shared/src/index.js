@@ -18,13 +18,13 @@ export const AVATAR_EQUIPMENT_SLOTS = [
   'aura',
   'frame',
   'badge',
-  'pose'
+  'pose',
+  'emote'
 ];
 export const AVATAR_COSMETIC_TYPES = [
   ...AVATAR_EQUIPMENT_SLOTS,
   'material',
-  'colorway',
-  'emote'
+  'colorway'
 ];
 export const PASSPORT_SCOPES = [
   'passport:profile:read',
@@ -54,6 +54,7 @@ export const defaultAvatar = Object.freeze({
   frameId: 'frame_neon_start',
   badgeId: 'rookie',
   poseId: 'power',
+  emoteId: 'emote_wave',
   animationSet: 'hero_idle',
   addons: []
 });
@@ -99,6 +100,7 @@ export const AvatarManifestSchema = z.object({
   frameId: z.string().min(1).default(defaultAvatar.frameId),
   badgeId: z.string().min(1).default(defaultAvatar.badgeId),
   poseId: z.string().min(1).default(defaultAvatar.poseId),
+  emoteId: z.string().min(1).default(defaultAvatar.emoteId),
   animationSet: z.string().min(1).default(defaultAvatar.animationSet),
   addons: z.array(AvatarAddonSchema).max(24).default(defaultAvatar.addons)
 });

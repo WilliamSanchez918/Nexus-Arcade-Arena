@@ -22,6 +22,7 @@ const AvatarManifestSchema = new mongoose.Schema({
   frameId: { type: String, default: defaultAvatar.frameId },
   badgeId: { type: String, default: defaultAvatar.badgeId },
   poseId: { type: String, default: defaultAvatar.poseId },
+  emoteId: { type: String, default: defaultAvatar.emoteId },
   animationSet: { type: String, default: defaultAvatar.animationSet },
   addons: [{
     slot: String,

@@ -23,7 +23,8 @@ import {
 import {
   AVATAR_EQUIPMENT_SLOTS,
   defaultAvatar,
-  normalizeDisplayName
+  normalizeDisplayName,
+  PASSPORT_SCOPE_CATALOG
 } from '../../../packages/shared/src/index.js';
 import {
   api,
@@ -267,6 +268,12 @@ const avatarSlotLabels = Object.freeze({
   pose: 'Pose',
   emote: 'Emote'
 });
+
+const defaultOAuthClientScopes = Object.freeze([
+  'passport:profile:read',
+  'passport:avatar:read',
+  'passport:stats:read'
+]);
 
 function groupCatalogItems(items = []) {
   return items.reduce((groups, item) => {
@@ -1719,6 +1726,7 @@ function OperatorWorkspace() {
   });
   const [clientName, setClientName] = useState('Demo Auth App');
   const [redirectUri, setRedirectUri] = useState('http://localhost:8080/oauth/callback');
+  const [selectedClientScopes, setSelectedClientScopes] = useState([...defaultOAuthClientScopes]);
   const [clientSecret, setClientSecret] = useState('');
 
   async function resetSlot(cabinetId, slot) {
@@ -1731,11 +1739,22 @@ function OperatorWorkspace() {
     const result = await api.registerAuthClient({
       name: clientName,
       redirectUris: [redirectUri],
-      allowedScopes: ['passport:profile:read', 'passport:avatar:read', 'passport:stats:read'],
+      allowedScopes: selectedClientScopes,
       type: 'public'
     });
     setClientSecret(result.clientSecret || 'public client');
     await clients.refresh();
+  }
+
+  function toggleClientScope(scope) {
+    setSelectedClientScopes((current) => {
+      if (scope === 'passport:profile:read') {
+        return current.includes(scope) ? current : [...current, scope];
+      }
+      return current.includes(scope)
+        ? current.filter((item) => item !== scope)
+        : [...current, scope];
+    });
   }
 
   function selectOperatorView(view) {
@@ -1807,10 +1826,29 @@ function OperatorWorkspace() {
         ) : null}
         {activeView === 'integrations' ? (
           <div className="panel wide">
-            <h2>OAuth clients</h2>
-            <form className="client-form" onSubmit={createClient}>
+            <div className="panel-header">
+              <h2>OAuth clients</h2>
+              <span className="builder-tag">Passport service</span>
+            </div>
+            <form className="client-form integration-client-form" onSubmit={createClient}>
               <label>Name <input value={clientName} onChange={(event) => setClientName(event.target.value)} /></label>
               <label>Redirect URI <input value={redirectUri} onChange={(event) => setRedirectUri(event.target.value)} /></label>
+              <div className="scope-picker" aria-label="Allowed Passport scopes">
+                {PASSPORT_SCOPE_CATALOG.map((scope) => (
+                  <label className="scope-option" key={scope.scope}>
+                    <input
+                      checked={selectedClientScopes.includes(scope.scope)}
+                      disabled={scope.scope === 'passport:profile:read'}
+                      onChange={() => toggleClientScope(scope.scope)}
+                      type="checkbox"
+                    />
+                    <span>
+                      <strong>{scope.label}</strong>
+                      <em>{scope.scope}</em>
+                    </span>
+                  </label>
+                ))}
+              </div>
               <button className="primary-button" type="submit">Register client</button>
             </form>
             {clientSecret ? <p className="client-secret">Secret: {clientSecret}</p> : null}
@@ -1819,7 +1857,10 @@ function OperatorWorkspace() {
                 <article className="cabinet-row" key={client.clientId}>
                   <div>
                     <strong>{client.name}</strong>
-                    <span>{client.clientId} - {client.type} - {client.allowedScopes.join(' ')}</span>
+                    <span>{client.clientId} - {client.type}</span>
+                    <div className="scope-tags">
+                      {client.allowedScopes.map((scope) => <em key={scope}>{scope}</em>)}
+                    </div>
                   </div>
                 </article>
               ))}
@@ -1852,10 +1893,82 @@ function OperatorPage() {
   return <OperatorWorkspace />;
 }
 
+function OAuthAuthorizePage() {
+  const authorizeParams = useMemo(() => new URLSearchParams(window.location.search), []);
+  const authorizeQuery = authorizeParams.toString();
+  const summary = useAsyncData(() => api.getOAuthAuthorizeSummary(authorizeQuery), [authorizeQuery]);
+  const [playerReady, setPlayerReady] = useState(Boolean(getPlayerToken()));
+
+  function approveAuthorization() {
+    window.location.assign(api.buildOAuthAuthorizeUrl(authorizeParams));
+  }
+
+  function denyAuthorization() {
+    const redirectUri = summary.data?.redirectUri || authorizeParams.get('redirect_uri');
+    if (!redirectUri) {
+      window.location.assign('/player/profile');
+      return;
+    }
+    const redirectUrl = new URL(redirectUri);
+    redirectUrl.searchParams.set('error', 'access_denied');
+    const state = authorizeParams.get('state');
+    if (state) {
+      redirectUrl.searchParams.set('state', state);
+    }
+    window.location.assign(redirectUrl.toString());
+  }
+
+  return (
+    <Shell title="Passport Authorization">
+      <section className="login-layout">
+        <div className="panel hero-panel consent-panel">
+          <ShieldCheck size={34} />
+          <h2>{summary.data?.client?.name || 'External app'} wants Passport access</h2>
+          {summary.loading ? <p>Loading authorization request...</p> : null}
+          {summary.error ? <p className="error">{summary.error}</p> : null}
+          {summary.data ? (
+            <>
+              <p>Review the Player Passport data this app can use.</p>
+              <div className="scope-list">
+                {summary.data.requestedScopes.map((scope) => (
+                  <article key={scope.scope}>
+                    <strong>{scope.label}</strong>
+                    <span>{scope.description}</span>
+                    <em>{scope.scope}</em>
+                  </article>
+                ))}
+              </div>
+              <p className="muted-copy">Redirect URI: {summary.data.redirectUri}</p>
+            </>
+          ) : null}
+        </div>
+        {playerReady ? (
+          <div className="panel consent-actions">
+            <h2><BadgeCheck size={22} /> Continue</h2>
+            <p className="muted-copy">This grants a short-lived authorization code to the requesting app. You can deny the request without changing your Player Passport.</p>
+            <button className="primary-button" disabled={!summary.data} onClick={approveAuthorization} type="button">
+              <ShieldCheck size={18} />
+              Allow access
+            </button>
+            <button className="secondary-button" onClick={denyAuthorization} type="button">
+              Deny
+            </button>
+          </div>
+        ) : (
+          <LoginForm compact onLogin={() => setPlayerReady(true)} />
+        )}
+      </section>
+    </Shell>
+  );
+}
+
 function App() {
   const path = window.location.pathname;
   if (path.startsWith('/play/login/')) {
     return <PhoneLoginPage sessionId={path.split('/').pop()} />;
+  }
+  if (path.startsWith('/oauth/authorize')) {
+    return <OAuthAuthorizePage />;
   }
   if (path.startsWith('/operator')) {
     return <OperatorPage />;

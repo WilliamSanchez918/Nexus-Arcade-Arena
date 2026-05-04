@@ -56,9 +56,13 @@ OAuth-style endpoints:
 
 - `GET /.well-known/oauth-authorization-server`
 - `POST /api/auth/clients`
-- `GET /oauth/authorize`
+- `GET /oauth/authorize/summary`
+- `GET /oauth/authorize` through the web consent screen, then API authorization-code redirect
 - `POST /oauth/token`
 - `POST /oauth/introspect`
+- `GET /api/passport/me`
+
+Passport access tokens are scope-filtered. `GET /api/passport/me` returns only the profile, avatar runtime manifest, stats, achievements, or leaderboard data granted to the OAuth/auth client. Avatar runtime manifests are versioned as `nexus-avatar-manifest/v1` so Rush Run and future 2D/3D games can consume the same equipment, color, morphology, add-on, and emote contract.
 
 ## Repository hygiene
 

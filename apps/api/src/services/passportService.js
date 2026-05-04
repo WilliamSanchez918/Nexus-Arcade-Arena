@@ -1,11 +1,14 @@
 import {
   AvatarManifestSchema,
+  exportAvatarRuntimeManifest,
   normalizeDisplayName,
   normalizeDisplayNameKey,
   publicPlayerFromProfile
 } from '../../../../packages/shared/src/index.js';
 import {
+  LeaderboardEntry,
   PlayerIdentity,
+  PlayerGameStats,
   PlayerProfile
 } from '../models/index.js';
 import { ensurePlayerInventory } from './avatarCatalogService.js';
@@ -82,6 +85,70 @@ export async function updatePlayerAvatar(playerId, avatarInput) {
 
 export function toPublicPlayer(profile, overrides = {}) {
   return publicPlayerFromProfile(profile, overrides);
+}
+
+export async function buildScopedPassportPayload(profile, scopes = []) {
+  const scopeSet = new Set(scopes);
+  const playerId = String(profile._id);
+  const payload = {
+    playerId,
+    scopes: [...scopeSet],
+    issuedAt: new Date().toISOString()
+  };
+
+  if (scopeSet.has('passport:profile:read')) {
+    payload.profile = {
+      playerId,
+      displayName: profile.displayName,
+      level: profile.progression?.level || 1,
+      status: profile.status,
+      createdAt: profile.createdAt?.toISOString?.() || profile.createdAt,
+      updatedAt: profile.updatedAt?.toISOString?.() || profile.updatedAt
+    };
+  }
+
+  if (scopeSet.has('passport:avatar:read')) {
+    payload.avatar = exportAvatarRuntimeManifest(profile.avatar);
+  }
+
+  if (scopeSet.has('passport:stats:read') || scopeSet.has('passport:achievements:read')) {
+    const stats = await PlayerGameStats.find({ playerId: profile._id }).sort({ lastPlayedAt: -1 }).lean();
+    if (scopeSet.has('passport:stats:read')) {
+      payload.stats = stats.map((entry) => ({
+        gameId: entry.gameId,
+        totalPlays: entry.totalPlays,
+        bestScore: entry.bestScore,
+        totalScore: entry.totalScore,
+        wins: entry.wins,
+        losses: entry.losses,
+        lastPlayedAt: entry.lastPlayedAt
+      }));
+    }
+    if (scopeSet.has('passport:achievements:read')) {
+      payload.achievements = stats.flatMap((entry) => entry.achievements.map((achievement) => ({
+        gameId: entry.gameId,
+        achievementId: achievement.achievementId,
+        unlockedAt: achievement.unlockedAt
+      })));
+    }
+  }
+
+  if (scopeSet.has('passport:leaderboard:read')) {
+    const entries = await LeaderboardEntry.find({ playerId: profile._id })
+      .sort({ achievedAt: -1 })
+      .limit(25)
+      .lean();
+    payload.leaderboards = entries.map((entry) => ({
+      gameId: entry.gameId,
+      scope: entry.scope,
+      siteId: entry.siteId,
+      season: entry.season,
+      score: entry.score,
+      achievedAt: entry.achievedAt
+    }));
+  }
+
+  return payload;
 }
 
 export function redactPlayerProfile(profile) {

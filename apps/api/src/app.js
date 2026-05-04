@@ -5,6 +5,7 @@ import { playerRouter } from './routes/player.js';
 import { leaderboardsRouter } from './routes/leaderboards.js';
 import { operatorRouter } from './routes/operator.js';
 import { authClientRouter, oauthRouter } from './routes/oauth.js';
+import { passportRouter } from './routes/passport.js';
 import { oauthMetadata } from './services/oauthService.js';
 
 export function createApp({ io } = {}) {
@@ -23,6 +24,7 @@ export function createApp({ io } = {}) {
   app.use('/api/leaderboards', leaderboardsRouter);
   app.use('/api/operator', operatorRouter);
   app.use('/api/auth', authClientRouter);
+  app.use('/api/passport', passportRouter);
   app.use('/oauth', oauthRouter);
 
   app.use((req, res) => {

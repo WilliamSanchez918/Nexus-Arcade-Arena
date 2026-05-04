@@ -1,7 +1,11 @@
 import mongoose from 'mongoose';
-import { defaultAvatar } from '../../../../packages/shared/src/index.js';
+import {
+  AVATAR_MANIFEST_VERSION,
+  defaultAvatar
+} from '../../../../packages/shared/src/index.js';
 
 const AvatarManifestSchema = new mongoose.Schema({
+  manifestVersion: { type: String, default: AVATAR_MANIFEST_VERSION },
   avatarId: { type: String, default: defaultAvatar.avatarId },
   baseStyle: { type: String, default: defaultAvatar.baseStyle },
   bodyType: { type: String, default: defaultAvatar.bodyType },

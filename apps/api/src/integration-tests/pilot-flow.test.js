@@ -138,18 +138,38 @@ test('Player Passport pilot flow works against Mongo', async () => {
     body: JSON.stringify({
       name: 'Preview Auth App',
       redirectUris: ['http://localhost:9999/callback'],
-      allowedScopes: ['passport:profile:read', 'passport:avatar:read', 'passport:stats:read'],
+      allowedScopes: [
+        'passport:profile:read',
+        'passport:avatar:read',
+        'passport:stats:read',
+        'passport:achievements:read',
+        'passport:leaderboard:read'
+      ],
       type: 'public'
     })
   });
   assert.equal(client.response.status, 201);
   const clientId = client.body.client.clientId;
+  const summaryUrl = new URL('/oauth/authorize/summary', baseUrl);
+  summaryUrl.searchParams.set('response_type', 'code');
+  summaryUrl.searchParams.set('client_id', clientId);
+  summaryUrl.searchParams.set('redirect_uri', 'http://localhost:9999/callback');
+  summaryUrl.searchParams.set('scope', 'passport:profile:read passport:avatar:read passport:leaderboard:read');
+  const authorizeSummary = await request(`${summaryUrl.pathname}${summaryUrl.search}`);
+  assert.equal(authorizeSummary.response.status, 200);
+  assert.equal(authorizeSummary.body.client.name, 'Preview Auth App');
+  assert.deepEqual(authorizeSummary.body.requestedScopes.map((scope) => scope.scope), [
+    'passport:profile:read',
+    'passport:avatar:read',
+    'passport:leaderboard:read'
+  ]);
+
   const codeVerifier = 'preview-pkce-verifier-12345678901234567890';
   const authorizeUrl = new URL('/oauth/authorize', baseUrl);
   authorizeUrl.searchParams.set('response_type', 'code');
   authorizeUrl.searchParams.set('client_id', clientId);
   authorizeUrl.searchParams.set('redirect_uri', 'http://localhost:9999/callback');
-  authorizeUrl.searchParams.set('scope', 'passport:profile:read passport:avatar:read');
+  authorizeUrl.searchParams.set('scope', 'passport:profile:read passport:avatar:read passport:stats:read passport:achievements:read passport:leaderboard:read');
   authorizeUrl.searchParams.set('code_challenge', sha256Base64Url(codeVerifier));
   authorizeUrl.searchParams.set('code_challenge_method', 'S256');
   authorizeUrl.searchParams.set('player_token', playerId);
@@ -170,7 +190,8 @@ test('Player Passport pilot flow works against Mongo', async () => {
     })
   });
   assert.equal(token.response.status, 200);
-  assert.equal(token.body.passport_profile.displayName, 'Preview Pilot');
+  assert.equal(token.body.passport.profile.displayName, 'Preview Pilot');
+  assert.equal(token.body.passport.avatar.manifestVersion, 'nexus-avatar-manifest/v1');
   assert.equal(token.body.token_type, 'Bearer');
 
   const introspection = await request('/oauth/introspect', {
@@ -179,6 +200,33 @@ test('Player Passport pilot flow works against Mongo', async () => {
   });
   assert.equal(introspection.body.active, true);
   assert.equal(introspection.body.sub, playerId);
+  assert.equal(introspection.body.passport.profile.playerId, playerId);
+
+  const profileOnlyAuthorizeUrl = new URL('/oauth/authorize', baseUrl);
+  profileOnlyAuthorizeUrl.searchParams.set('response_type', 'code');
+  profileOnlyAuthorizeUrl.searchParams.set('client_id', clientId);
+  profileOnlyAuthorizeUrl.searchParams.set('redirect_uri', 'http://localhost:9999/callback');
+  profileOnlyAuthorizeUrl.searchParams.set('scope', 'passport:profile:read');
+  profileOnlyAuthorizeUrl.searchParams.set('player_token', playerId);
+  const profileOnlyAuthorizeResponse = await fetch(profileOnlyAuthorizeUrl, { redirect: 'manual' });
+  assert.equal(profileOnlyAuthorizeResponse.status, 302);
+  const profileOnlyCode = new URL(profileOnlyAuthorizeResponse.headers.get('location')).searchParams.get('code');
+  const profileOnlyToken = await request('/oauth/token', {
+    method: 'POST',
+    body: JSON.stringify({
+      grant_type: 'authorization_code',
+      code: profileOnlyCode,
+      redirect_uri: 'http://localhost:9999/callback',
+      client_id: clientId
+    })
+  });
+  const profileOnlyPassport = await request('/api/passport/me', {
+    headers: { authorization: `Bearer ${profileOnlyToken.body.access_token}` }
+  });
+  assert.equal(profileOnlyPassport.response.status, 200);
+  assert.equal(profileOnlyPassport.body.profile.displayName, 'Preview Pilot');
+  assert.equal(Object.hasOwn(profileOnlyPassport.body, 'avatar'), false);
+  assert.equal(Object.hasOwn(profileOnlyPassport.body, 'stats'), false);
 
   const pairing = await request('/api/arcade/cabinet-login', {
     method: 'POST',
@@ -243,4 +291,13 @@ test('Player Passport pilot flow works against Mongo', async () => {
   assert.equal(leaderboard.response.status, 200);
   assert.equal(leaderboard.body.entries[0].displayName, 'Preview Pilot');
   assert.equal(leaderboard.body.entries[0].score, 4800);
+
+  const passportResource = await request('/api/passport/me', {
+    headers: { authorization: `Bearer ${token.body.access_token}` }
+  });
+  assert.equal(passportResource.response.status, 200);
+  assert.equal(passportResource.body.avatar.equipment.body, 'body_street_legend');
+  assert.equal(passportResource.body.stats[0].gameId, 'rush_run');
+  assert.equal(passportResource.body.stats[0].bestScore, 4800);
+  assert.equal(passportResource.body.leaderboards[0].score, 4800);
 });

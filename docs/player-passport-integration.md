@@ -59,3 +59,33 @@ Games submit signed results to the Hub callback URL. The Hub verifies the signat
 ## OAuth/Auth application rule
 
 External auth apps should register a client, request only the scopes they need, and exchange authorization codes for short-lived Passport access tokens. Token consumers should call `/oauth/introspect` when they need fresh profile/avatar/session metadata instead of storing cabinet or player internals.
+
+The V1 authorization endpoint is split into a browser consent surface and a direct API surface:
+
+- Browser users are sent to `/oauth/authorize` on the web app. The screen shows the registered client, redirect URI, and requested Passport scopes before the player approves the request.
+- The web app forwards approved requests to the API `/oauth/authorize` endpoint with the local V1 player token. The API issues a one-time authorization code and redirects to the registered callback URI.
+- `GET /oauth/authorize/summary` returns the client and scope metadata used by the consent screen.
+
+Supported scopes:
+
+- `passport:profile:read` - display name, player ID, status, level, and profile timestamps.
+- `passport:avatar:read` - versioned runtime avatar manifest for 2D and 3D renderers.
+- `passport:stats:read` - per-game play counts, scores, wins, losses, and last-played timestamps.
+- `passport:achievements:read` - achievement unlocks derived from game stats.
+- `passport:leaderboard:read` - leaderboard entries associated with the player.
+- `passport:session:write` - cabinet/session write operations for trusted arcade clients.
+
+Access tokens can be used against `GET /api/passport/me` with `Authorization: Bearer <token>`. The response is scope-filtered, so an app with only `passport:profile:read` does not receive avatar, stats, achievements, or leaderboard data.
+
+## Runtime avatar manifest
+
+Games should consume `exportAvatarRuntimeManifest()` from `nexus-arcade-shared` or the `passport.avatar` object returned by `GET /api/passport/me`. The runtime manifest is versioned as `nexus-avatar-manifest/v1` and contains:
+
+- `colors` - primary, secondary, and accent color masks.
+- `morphology` - body type, body ID, and head ID.
+- `equipment` - stable cosmetic IDs for supported avatar slots.
+- `animation` - pose, emote, and animation set IDs.
+- `addons` - enabled add-ons only.
+- `compatibility` - supported slots and render targets.
+
+2D games can map the same equipment IDs to sprite layers; 3D games can map them to rig attachments or GLB parts. The manifest is read-only game input and should not be mutated by a game runtime.

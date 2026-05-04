@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import {
+  describePassportScopes,
   OAuthAuthorizeRequestSchema,
   OAuthTokenRequestSchema,
   PASSPORT_SCOPES,
@@ -18,14 +19,18 @@ import {
   safeEqualHash,
   sha256Base64Url
 } from './tokenService.js';
-import { toPublicPlayer } from './passportService.js';
+import {
+  buildScopedPassportPayload,
+  toPublicPlayer
+} from './passportService.js';
 
 const ACCESS_TOKEN_SECONDS = 3600;
 const AUTH_CODE_SECONDS = 300;
 
 export function normalizeScopes(scopeText = 'passport:profile:read') {
   const requested = String(scopeText).split(/\s+/).filter(Boolean);
-  return [...new Set(requested)];
+  const scopes = [...new Set(requested)];
+  return scopes.length ? scopes : ['passport:profile:read'];
 }
 
 export function assertScopesAllowed(requested, allowed) {
@@ -90,6 +95,38 @@ export async function registerOAuthClient(input) {
       status: client.status
     },
     clientSecret
+  };
+}
+
+export async function getAuthorizationSummary(rawRequest) {
+  const request = OAuthAuthorizeRequestSchema.parse(rawRequest);
+  const client = await OAuthClient.findOne({ clientId: request.client_id, status: 'active' });
+  if (!client) {
+    const error = new Error('Unknown OAuth client');
+    error.statusCode = 400;
+    throw error;
+  }
+  if (!client.redirectUris.includes(request.redirect_uri)) {
+    const error = new Error('redirect_uri is not registered for this client');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const scopes = normalizeScopes(request.scope);
+  assertScopesAllowed(scopes, client.allowedScopes);
+
+  return {
+    client: {
+      clientId: client.clientId,
+      name: client.name,
+      type: client.type,
+      status: client.status
+    },
+    redirectUri: request.redirect_uri,
+    responseType: request.response_type,
+    requestedScopes: describePassportScopes(scopes),
+    state: request.state,
+    codeChallengeMethod: request.code_challenge_method
   };
 }
 
@@ -195,6 +232,7 @@ export async function exchangeAuthorizationCode(rawRequest) {
   };
   const accessToken = signPassportAccessTokenClaims(claims);
   const refreshToken = randomToken(32);
+  const passport = await buildScopedPassportPayload(authCode.playerId, authCode.scope);
 
   await OAuthAccessToken.create({
     tokenHash: hashToken(accessToken, config.passportTokenSecret),
@@ -211,14 +249,17 @@ export async function exchangeAuthorizationCode(rawRequest) {
     expires_in: ACCESS_TOKEN_SECONDS,
     refresh_token: refreshToken,
     scope: authCode.scope.join(' '),
-    passport_profile: toPublicPlayer(authCode.playerId)
+    passport,
+    passport_profile: authCode.scope.includes('passport:profile:read') && authCode.scope.includes('passport:avatar:read')
+      ? toPublicPlayer(authCode.playerId)
+      : undefined
   };
 }
 
-export async function introspectAccessToken(token) {
+export async function resolvePassportAccessToken(token) {
   const claims = verifyPassportAccessTokenClaims(token);
   if (!claims || claims.exp <= Math.floor(Date.now() / 1000)) {
-    return { active: false };
+    return null;
   }
 
   const stored = await OAuthAccessToken.findOne({
@@ -227,23 +268,44 @@ export async function introspectAccessToken(token) {
   }).populate('playerId');
 
   if (!stored || stored.expiresAt <= new Date()) {
-    return { active: false };
+    return null;
   }
 
   return {
+    claims,
+    stored,
+    profile: stored.playerId,
+    scopes: stored.scope
+  };
+}
+
+export async function introspectAccessToken(token) {
+  const resolved = await resolvePassportAccessToken(token);
+  if (!resolved) {
+    return { active: false };
+  }
+
+  const passport = await buildScopedPassportPayload(resolved.profile, resolved.scopes);
+
+  return {
     active: true,
-    client_id: stored.clientId,
-    sub: String(stored.playerId._id),
-    scope: stored.scope.join(' '),
-    exp: Math.floor(stored.expiresAt.getTime() / 1000),
-    passport_profile: toPublicPlayer(stored.playerId)
+    client_id: resolved.stored.clientId,
+    sub: String(resolved.profile._id),
+    scope: resolved.scopes.join(' '),
+    exp: Math.floor(resolved.stored.expiresAt.getTime() / 1000),
+    passport,
+    passport_profile: resolved.scopes.includes('passport:profile:read') && resolved.scopes.includes('passport:avatar:read')
+      ? toPublicPlayer(resolved.profile)
+      : undefined
   };
 }
 
 export function oauthMetadata() {
   return {
     issuer: config.oauthIssuer,
-    authorization_endpoint: `${config.oauthIssuer}/oauth/authorize`,
+    authorization_endpoint: `${config.appBaseUrl}/oauth/authorize`,
+    authorization_api_endpoint: `${config.oauthIssuer}/oauth/authorize`,
+    authorization_summary_endpoint: `${config.oauthIssuer}/oauth/authorize/summary`,
     token_endpoint: `${config.oauthIssuer}/oauth/token`,
     introspection_endpoint: `${config.oauthIssuer}/oauth/introspect`,
     response_types_supported: ['code'],

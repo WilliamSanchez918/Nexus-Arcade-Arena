@@ -17,6 +17,12 @@ import {
   maskDestination
 } from '../services/twoFactorService.js';
 import { defaultOperatorConfig } from '../services/operatorConfigService.js';
+import {
+  AvatarRuntimeManifestSchema,
+  describePassportScopes,
+  exportAvatarRuntimeManifest,
+  PASSPORT_SCOPES
+} from '../../../../packages/shared/src/index.js';
 
 test('token hashes compare safely', () => {
   const hash = hashToken('abc', 'pepper');
@@ -46,7 +52,15 @@ test('OAuth scope and PKCE helpers are deterministic', () => {
     'passport:profile:read',
     'passport:avatar:read'
   ]);
+  assert.deepEqual(normalizeScopes(''), ['passport:profile:read']);
   assert.equal(verifyPkce({ verifier: 'abc', challenge: 'abc', method: 'plain' }), true);
+});
+
+test('Passport scope catalog describes external app grants', () => {
+  assert.equal(PASSPORT_SCOPES.includes('passport:achievements:read'), true);
+  assert.equal(PASSPORT_SCOPES.includes('passport:leaderboard:read'), true);
+  const described = describePassportScopes(['passport:profile:read', 'passport:avatar:read']);
+  assert.deepEqual(described.map((scope) => scope.label), ['Profile', 'Avatar']);
 });
 
 test('Passport access token claims are HMAC signed', () => {
@@ -87,6 +101,15 @@ test('avatar catalog exposes starter equipment for game-safe manifests', () => {
   assert.equal(catalogIds.has('emote_air_guitar'), true);
   assert.equal(catalogIds.has('emote_high_score'), true);
   assert.equal(catalogIds.has('boots_hover_soles'), true);
+});
+
+test('avatar runtime manifests are versioned for 2D and 3D consumers', () => {
+  const runtimeManifest = exportAvatarRuntimeManifest(undefined, { target: '3d' });
+  assert.equal(runtimeManifest.manifestVersion, 'nexus-avatar-manifest/v1');
+  assert.equal(runtimeManifest.target, '3d');
+  assert.equal(runtimeManifest.equipment.hair, 'hair_glowhawk');
+  assert.equal(runtimeManifest.compatibility.supportedTargets.includes('2d'), true);
+  assert.equal(AvatarRuntimeManifestSchema.safeParse(runtimeManifest).success, true);
 });
 
 test('two-factor helpers generate six-digit codes and masked delivery hints', () => {

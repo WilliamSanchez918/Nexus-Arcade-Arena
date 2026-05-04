@@ -26,14 +26,44 @@ export const AVATAR_COSMETIC_TYPES = [
   'material',
   'colorway'
 ];
-export const PASSPORT_SCOPES = [
-  'passport:profile:read',
-  'passport:avatar:read',
-  'passport:stats:read',
-  'passport:session:write'
-];
+export const AVATAR_MANIFEST_VERSION = 'nexus-avatar-manifest/v1';
+export const AVATAR_RENDER_TARGETS = ['shared', '2d', '3d'];
+export const PASSPORT_SCOPE_CATALOG = Object.freeze([
+  {
+    scope: 'passport:profile:read',
+    label: 'Profile',
+    description: 'Read the player ID, display name, level, and public profile flags.'
+  },
+  {
+    scope: 'passport:avatar:read',
+    label: 'Avatar',
+    description: 'Read the versioned avatar manifest for 2D and 3D game rendering.'
+  },
+  {
+    scope: 'passport:stats:read',
+    label: 'Stats',
+    description: 'Read per-game play counts, best scores, wins, and losses.'
+  },
+  {
+    scope: 'passport:achievements:read',
+    label: 'Achievements',
+    description: 'Read achievement unlocks generated from signed game results.'
+  },
+  {
+    scope: 'passport:leaderboard:read',
+    label: 'Leaderboards',
+    description: 'Read leaderboard entries connected to the player.'
+  },
+  {
+    scope: 'passport:session:write',
+    label: 'Cabinet Sessions',
+    description: 'Claim or update active cabinet player sessions.'
+  }
+]);
+export const PASSPORT_SCOPES = PASSPORT_SCOPE_CATALOG.map((item) => item.scope);
 
 export const defaultAvatar = Object.freeze({
+  manifestVersion: AVATAR_MANIFEST_VERSION,
   avatarId: 'default_neon_01',
   baseStyle: 'neon',
   bodyType: 'hero',
@@ -80,6 +110,7 @@ export const AvatarAddonSchema = z.object({
 });
 
 export const AvatarManifestSchema = z.object({
+  manifestVersion: z.literal(AVATAR_MANIFEST_VERSION).default(defaultAvatar.manifestVersion),
   avatarId: z.string().min(1).default(defaultAvatar.avatarId),
   baseStyle: z.string().min(1).default(defaultAvatar.baseStyle),
   bodyType: z.enum(AVATAR_BODY_TYPES).default(defaultAvatar.bodyType),
@@ -103,6 +134,33 @@ export const AvatarManifestSchema = z.object({
   emoteId: z.string().min(1).default(defaultAvatar.emoteId),
   animationSet: z.string().min(1).default(defaultAvatar.animationSet),
   addons: z.array(AvatarAddonSchema).max(24).default(defaultAvatar.addons)
+});
+
+export const AvatarRuntimeManifestSchema = z.object({
+  manifestVersion: z.literal(AVATAR_MANIFEST_VERSION),
+  target: z.enum(AVATAR_RENDER_TARGETS).default('shared'),
+  avatarId: z.string().min(1),
+  colors: z.object({
+    primary: HexColorSchema,
+    secondary: HexColorSchema,
+    accent: HexColorSchema
+  }),
+  morphology: z.object({
+    bodyType: z.enum(AVATAR_BODY_TYPES),
+    bodyId: z.string().min(1),
+    headId: z.string().min(1)
+  }),
+  equipment: z.record(z.string()),
+  animation: z.object({
+    poseId: z.string().min(1),
+    emoteId: z.string().min(1),
+    animationSet: z.string().min(1)
+  }),
+  addons: z.array(AvatarAddonSchema).default([]),
+  compatibility: z.object({
+    supportedSlots: z.array(AvatarEquipmentSlotSchema),
+    supportedTargets: z.array(z.enum(AVATAR_RENDER_TARGETS))
+  })
 });
 
 export const CosmeticCatalogItemSchema = z.object({
@@ -272,7 +330,8 @@ export const OAuthTokenResponseSchema = z.object({
   expires_in: z.number().int().positive(),
   refresh_token: z.string().optional(),
   scope: z.string(),
-  passport_profile: PublicPlayerSchema
+  passport: z.record(z.unknown()).optional(),
+  passport_profile: PublicPlayerSchema.optional()
 });
 
 export const TokenIntrospectionResponseSchema = z.object({
@@ -281,7 +340,8 @@ export const TokenIntrospectionResponseSchema = z.object({
   sub: z.string().optional(),
   scope: z.string().optional(),
   exp: z.number().optional(),
-  passport_profile: PublicPlayerSchema.optional()
+  passport_profile: PublicPlayerSchema.optional(),
+  passport: z.record(z.unknown()).optional()
 });
 
 export const TwoFactorChallengeResponseSchema = z.object({
@@ -310,6 +370,61 @@ export function normalizeDisplayNameKey(displayName) {
 export function levelFromXp(xp) {
   const safeXp = Math.max(0, Number(xp) || 0);
   return Math.max(1, Math.floor(Math.sqrt(safeXp / 100)) + 1);
+}
+
+export function describePassportScopes(scopes = []) {
+  const requested = new Set(scopes);
+  return PASSPORT_SCOPE_CATALOG.filter((item) => requested.has(item.scope));
+}
+
+export function exportAvatarRuntimeManifest(avatarInput = defaultAvatar, { target = 'shared' } = {}) {
+  const avatarSource = typeof avatarInput?.toObject === 'function'
+    ? avatarInput.toObject()
+    : avatarInput;
+  const avatar = AvatarManifestSchema.parse({
+    ...defaultAvatar,
+    ...(avatarSource || {})
+  });
+  return AvatarRuntimeManifestSchema.parse({
+    manifestVersion: avatar.manifestVersion,
+    target,
+    avatarId: avatar.avatarId,
+    colors: {
+      primary: avatar.primaryColor,
+      secondary: avatar.secondaryColor,
+      accent: avatar.accentColor
+    },
+    morphology: {
+      bodyType: avatar.bodyType,
+      bodyId: avatar.bodyId,
+      headId: avatar.headId
+    },
+    equipment: {
+      body: avatar.bodyId,
+      head: avatar.headId,
+      hair: avatar.hairId,
+      helmet: avatar.helmetId,
+      visor: avatar.visorId,
+      outfit: avatar.outfitId,
+      boots: avatar.bootsId,
+      back: avatar.backId,
+      trail: avatar.trailId,
+      aura: avatar.auraId,
+      frame: avatar.frameId,
+      badge: avatar.badgeId,
+      material: avatar.materialId
+    },
+    animation: {
+      poseId: avatar.poseId,
+      emoteId: avatar.emoteId,
+      animationSet: avatar.animationSet
+    },
+    addons: avatar.addons.filter((addon) => addon.enabled),
+    compatibility: {
+      supportedSlots: [...AVATAR_EQUIPMENT_SLOTS],
+      supportedTargets: [...AVATAR_RENDER_TARGETS]
+    }
+  });
 }
 
 export function publicPlayerFromProfile(profile, overrides = {}) {

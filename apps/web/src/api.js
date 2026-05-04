@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3000';
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3000';
 const PLAYER_TOKEN_KEY = 'nexus.playerToken';
 const OPERATOR_TOKEN_KEY = 'nexus.operatorToken';
 
@@ -144,5 +144,19 @@ export const api = {
       method: 'POST',
       body: JSON.stringify(payload)
     });
+  },
+  getOAuthAuthorizeSummary(searchParams) {
+    const query = searchParams instanceof URLSearchParams ? searchParams.toString() : String(searchParams || '');
+    return request(`/oauth/authorize/summary${query ? `?${query}` : ''}`);
+  },
+  buildOAuthAuthorizeUrl(searchParams) {
+    const params = searchParams instanceof URLSearchParams
+      ? new URLSearchParams(searchParams)
+      : new URLSearchParams(String(searchParams || ''));
+    const playerToken = getPlayerToken();
+    if (playerToken) {
+      params.set('player_token', playerToken);
+    }
+    return `${API_BASE_URL}/oauth/authorize?${params.toString()}`;
   }
 };

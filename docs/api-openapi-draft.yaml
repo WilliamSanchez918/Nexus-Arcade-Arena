@@ -79,10 +79,16 @@ paths:
           description: Client list
   /oauth/authorize:
     get:
-      summary: Issue an authorization code for an authenticated Player Passport
+      summary: Issue an authorization code for an authenticated Player Passport after consent
       responses:
         "302":
           description: Redirects to client callback with code
+  /oauth/authorize/summary:
+    get:
+      summary: Return OAuth client and requested scope metadata for the consent screen
+      responses:
+        "200":
+          description: Authorization request summary
   /oauth/token:
     post:
       summary: Exchange an authorization code for a short-lived Passport access token
@@ -94,7 +100,15 @@ paths:
       summary: Introspect a Passport access token
       responses:
         "200":
-          description: Token activity and public Player Passport profile
+          description: Token activity and scope-filtered Player Passport payload
+  /api/passport/me:
+    get:
+      summary: Return the scope-filtered Passport resource for a Bearer access token
+      security:
+        - PassportBearer: []
+      responses:
+        "200":
+          description: Scope-filtered profile, avatar, stats, achievements, and leaderboard data
   /api/player/claim-cabinet-session:
     post:
       summary: Claim a cabinet QR session for a Player Passport
@@ -160,3 +174,6 @@ components:
       type: apiKey
       in: header
       name: x-operator-token
+    PassportBearer:
+      type: http
+      scheme: bearer

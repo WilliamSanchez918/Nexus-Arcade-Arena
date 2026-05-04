@@ -2,6 +2,7 @@ import express from 'express';
 import {
   createAuthorizationCode,
   exchangeAuthorizationCode,
+  getAuthorizationSummary,
   introspectAccessToken,
   oauthMetadata,
   registerOAuthClient
@@ -11,6 +12,14 @@ import { requireOperatorSession } from '../services/operatorAuthService.js';
 
 export const oauthRouter = express.Router();
 export const authClientRouter = express.Router();
+
+oauthRouter.get('/authorize/summary', async (req, res, next) => {
+  try {
+    res.json(await getAuthorizationSummary(req.query));
+  } catch (error) {
+    next(error);
+  }
+});
 
 oauthRouter.get('/authorize', async (req, res, next) => {
   try {

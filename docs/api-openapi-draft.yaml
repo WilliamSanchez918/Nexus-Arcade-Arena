@@ -64,6 +64,36 @@ paths:
       responses:
         "200":
           description: Player assigned to cabinet slot
+  /api/player/avatar/catalog:
+    get:
+      summary: List active 2D/3D avatar cosmetic catalog items
+      responses:
+        "200":
+          description: Avatar cosmetic catalog
+  /api/player/me:
+    get:
+      summary: Return the current public Player Passport profile
+      responses:
+        "200":
+          description: Player Passport profile
+  /api/player/me/avatar:
+    patch:
+      summary: Update avatar manifest fields such as color masks and avatar ID
+      responses:
+        "200":
+          description: Updated Player Passport profile
+  /api/player/me/inventory:
+    get:
+      summary: Return owned avatar cosmetics and equipped slot map
+      responses:
+        "200":
+          description: Player avatar inventory
+  /api/player/me/equipment:
+    patch:
+      summary: Equip an owned avatar cosmetic to a slot
+      responses:
+        "200":
+          description: Updated profile and inventory
   /api/arcade/game-session/start:
     post:
       summary: Start a tracked game session and return launch payload

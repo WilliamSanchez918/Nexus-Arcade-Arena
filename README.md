@@ -37,6 +37,13 @@ If no executable path is configured, service tests use `tools/game-simulator` to
 
 Other systems should integrate through `packages/shared` schemas and the `/api/player`, `/api/arcade`, `/api/auth`, `/oauth`, and `/api/leaderboards` APIs. Cabinet-specific behavior stays in `apps/hub`; reusable identity, avatar, progression, session, auth-client, token, and leaderboard contracts live in shared/API code.
 
+Avatar and inventory endpoints:
+
+- `GET /api/player/avatar/catalog`
+- `GET /api/player/me/inventory`
+- `PATCH /api/player/me/avatar`
+- `PATCH /api/player/me/equipment`
+
 OAuth-style endpoints:
 
 - `GET /.well-known/oauth-authorization-server`

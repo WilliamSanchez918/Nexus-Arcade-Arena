@@ -3,6 +3,26 @@ import { z } from 'zod';
 export const PLAYER_SLOTS = ['P1', 'P2'];
 export const GAME_MODES = ['solo', 'versus', 'co-op', 'guest'];
 export const QR_LOGIN_STATUSES = ['pending', 'claimed', 'expired', 'cancelled'];
+export const AVATAR_BODY_TYPES = ['runner', 'android', 'sprite', 'guardian'];
+export const AVATAR_EQUIPMENT_SLOTS = [
+  'body',
+  'head',
+  'helmet',
+  'visor',
+  'outfit',
+  'back',
+  'trail',
+  'aura',
+  'frame',
+  'badge',
+  'pose'
+];
+export const AVATAR_COSMETIC_TYPES = [
+  ...AVATAR_EQUIPMENT_SLOTS,
+  'material',
+  'colorway',
+  'emote'
+];
 export const PASSPORT_SCOPES = [
   'passport:profile:read',
   'passport:avatar:read',
@@ -13,11 +33,24 @@ export const PASSPORT_SCOPES = [
 export const defaultAvatar = Object.freeze({
   avatarId: 'default_neon_01',
   baseStyle: 'neon',
+  bodyType: 'runner',
+  bodyId: 'body_runner_core',
+  headId: 'head_spark',
+  helmetId: 'helmet_vector',
+  visorId: 'visor_clear',
+  outfitId: 'outfit_grid',
+  backId: 'back_none',
+  trailId: 'trail_neon',
+  auraId: 'aura_none',
+  materialId: 'material_gloss',
   primaryColor: '#00E5FF',
   secondaryColor: '#FF2ED1',
-  frameId: 'none',
+  accentColor: '#FFD400',
+  frameId: 'frame_neon_start',
   badgeId: 'rookie',
-  poseId: 'idle'
+  poseId: 'idle',
+  animationSet: 'runner_idle',
+  addons: []
 });
 
 export const xpRules = Object.freeze({
@@ -31,15 +64,69 @@ export const xpRules = Object.freeze({
 });
 
 export const HexColorSchema = z.string().regex(/^#[0-9A-Fa-f]{6}$/);
+export const AvatarEquipmentSlotSchema = z.enum(AVATAR_EQUIPMENT_SLOTS);
+export const AvatarCosmeticTypeSchema = z.enum(AVATAR_COSMETIC_TYPES);
+
+export const AvatarAddonSchema = z.object({
+  slot: AvatarEquipmentSlotSchema,
+  cosmeticId: z.string().min(1),
+  enabled: z.boolean().default(true)
+});
 
 export const AvatarManifestSchema = z.object({
   avatarId: z.string().min(1).default(defaultAvatar.avatarId),
   baseStyle: z.string().min(1).default(defaultAvatar.baseStyle),
+  bodyType: z.enum(AVATAR_BODY_TYPES).default(defaultAvatar.bodyType),
+  bodyId: z.string().min(1).default(defaultAvatar.bodyId),
+  headId: z.string().min(1).default(defaultAvatar.headId),
+  helmetId: z.string().min(1).default(defaultAvatar.helmetId),
+  visorId: z.string().min(1).default(defaultAvatar.visorId),
+  outfitId: z.string().min(1).default(defaultAvatar.outfitId),
+  backId: z.string().min(1).default(defaultAvatar.backId),
+  trailId: z.string().min(1).default(defaultAvatar.trailId),
+  auraId: z.string().min(1).default(defaultAvatar.auraId),
+  materialId: z.string().min(1).default(defaultAvatar.materialId),
   primaryColor: HexColorSchema.default(defaultAvatar.primaryColor),
   secondaryColor: HexColorSchema.default(defaultAvatar.secondaryColor),
+  accentColor: HexColorSchema.default(defaultAvatar.accentColor),
   frameId: z.string().min(1).default(defaultAvatar.frameId),
   badgeId: z.string().min(1).default(defaultAvatar.badgeId),
-  poseId: z.string().min(1).default(defaultAvatar.poseId)
+  poseId: z.string().min(1).default(defaultAvatar.poseId),
+  animationSet: z.string().min(1).default(defaultAvatar.animationSet),
+  addons: z.array(AvatarAddonSchema).max(24).default(defaultAvatar.addons)
+});
+
+export const CosmeticCatalogItemSchema = z.object({
+  cosmeticId: z.string().min(1),
+  type: AvatarCosmeticTypeSchema,
+  slot: AvatarEquipmentSlotSchema.optional(),
+  title: z.string().min(1).max(80),
+  description: z.string().max(240).default(''),
+  rarity: z.enum(['common', 'rare', 'epic', 'founder', 'pilot']).default('common'),
+  compatibleBodyTypes: z.array(z.enum(AVATAR_BODY_TYPES)).default([...AVATAR_BODY_TYPES]),
+  colorMasks: z.array(z.enum(['primary', 'secondary', 'accent'])).default([]),
+  asset2d: z.record(z.unknown()).default({}),
+  asset3d: z.record(z.unknown()).default({}),
+  preview: z.record(z.unknown()).default({}),
+  unlockRule: z.record(z.unknown()).default({}),
+  sortOrder: z.number().int().default(0),
+  active: z.boolean().default(true)
+});
+
+export const PlayerAvatarInventorySchema = z.object({
+  playerId: z.string().min(1),
+  cosmetics: z.array(z.object({
+    cosmeticId: z.string().min(1),
+    slot: AvatarEquipmentSlotSchema.optional(),
+    unlockedAt: z.string().datetime().optional(),
+    source: z.string().default('starter')
+  })).default([]),
+  badges: z.array(z.object({
+    badgeId: z.string().min(1),
+    unlockedAt: z.string().datetime().optional()
+  })).default([]),
+  equipped: z.record(z.string()).default({}),
+  unlocks: z.record(z.unknown()).default({})
 });
 
 export const PlayerSlotSchema = z.enum(PLAYER_SLOTS);

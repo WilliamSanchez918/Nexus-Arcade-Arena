@@ -4,11 +4,28 @@ import { defaultAvatar } from '../../../../packages/shared/src/index.js';
 const AvatarManifestSchema = new mongoose.Schema({
   avatarId: { type: String, default: defaultAvatar.avatarId },
   baseStyle: { type: String, default: defaultAvatar.baseStyle },
+  bodyType: { type: String, default: defaultAvatar.bodyType },
+  bodyId: { type: String, default: defaultAvatar.bodyId },
+  headId: { type: String, default: defaultAvatar.headId },
+  helmetId: { type: String, default: defaultAvatar.helmetId },
+  visorId: { type: String, default: defaultAvatar.visorId },
+  outfitId: { type: String, default: defaultAvatar.outfitId },
+  backId: { type: String, default: defaultAvatar.backId },
+  trailId: { type: String, default: defaultAvatar.trailId },
+  auraId: { type: String, default: defaultAvatar.auraId },
+  materialId: { type: String, default: defaultAvatar.materialId },
   primaryColor: { type: String, default: defaultAvatar.primaryColor },
   secondaryColor: { type: String, default: defaultAvatar.secondaryColor },
+  accentColor: { type: String, default: defaultAvatar.accentColor },
   frameId: { type: String, default: defaultAvatar.frameId },
   badgeId: { type: String, default: defaultAvatar.badgeId },
-  poseId: { type: String, default: defaultAvatar.poseId }
+  poseId: { type: String, default: defaultAvatar.poseId },
+  animationSet: { type: String, default: defaultAvatar.animationSet },
+  addons: [{
+    slot: String,
+    cosmeticId: String,
+    enabled: { type: Boolean, default: true }
+  }]
 }, { _id: false });
 
 const PlayerProfileSchema = new mongoose.Schema({

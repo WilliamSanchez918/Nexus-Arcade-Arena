@@ -6,9 +6,9 @@ import {
 } from '../../../../packages/shared/src/index.js';
 import {
   PlayerIdentity,
-  PlayerInventory,
   PlayerProfile
 } from '../models/index.js';
+import { ensurePlayerInventory } from './avatarCatalogService.js';
 
 export function sanitizeOptionalIdentifier(value) {
   const cleaned = String(value || '').trim().toLowerCase();
@@ -32,15 +32,12 @@ export async function findOrCreateDevProfile({ displayName, email, phone }) {
       normalizedDisplayName,
       lastLoginAt: new Date()
     });
-    await PlayerInventory.create({
-      playerId: profile._id,
-      cosmetics: [{ cosmeticId: 'frame_neon_start', source: 'starter' }],
-      badges: [{ badgeId: 'rookie' }]
-    });
+    await ensurePlayerInventory(profile._id, profile.avatar);
   } else {
     profile.displayName = cleanDisplayName;
     profile.lastLoginAt = new Date();
     await profile.save();
+    await ensurePlayerInventory(profile._id, profile.avatar);
   }
 
   const identifiers = [

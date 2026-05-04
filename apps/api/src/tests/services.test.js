@@ -8,6 +8,10 @@ import {
   verifyPkce,
   signPassportAccessTokenClaims
 } from '../services/oauthService.js';
+import {
+  avatarCatalogItems,
+  defaultEquippedFromAvatar
+} from '../services/avatarCatalogService.js';
 
 test('token hashes compare safely', () => {
   const hash = hashToken('abc', 'pepper');
@@ -50,4 +54,14 @@ test('Passport access token claims are HMAC signed', () => {
   });
   const claims = verifyPassportAccessTokenClaims(token);
   assert.equal(claims.sub, 'player-1');
+});
+
+test('avatar catalog exposes starter equipment for game-safe manifests', () => {
+  const equipped = defaultEquippedFromAvatar();
+  const catalogIds = new Set(avatarCatalogItems.map((item) => item.cosmeticId));
+
+  assert.equal(equipped.body, 'body_runner_core');
+  assert.equal(equipped.badge, 'badge_rookie');
+  assert.equal(catalogIds.has(equipped.helmet), true);
+  assert.equal(catalogIds.has('back_boost_pack'), true);
 });

@@ -4,8 +4,21 @@ import './styles.css';
 
 const { launchPayload, callbackUrl, callbackSecret } = parseLaunchParams();
 const primaryPlayer = launchPayload.players[0];
+const primaryAvatar = primaryPlayer.avatar || {};
 
-document.getElementById('player-label').textContent = `${primaryPlayer.displayName} · Level ${primaryPlayer.level}`;
+function colorNumber(hex, fallback = 0x00e5ff) {
+  if (!/^#[0-9a-f]{6}$/i.test(hex || '')) {
+    return fallback;
+  }
+  return Number.parseInt(hex.slice(1), 16);
+}
+
+document.documentElement.style.setProperty('--player-primary', primaryAvatar.primaryColor || '#00E5FF');
+document.documentElement.style.setProperty('--player-secondary', primaryAvatar.secondaryColor || '#FF2ED1');
+document.documentElement.style.setProperty('--player-accent', primaryAvatar.accentColor || '#FFD400');
+
+
+document.getElementById('player-label').textContent = `${primaryPlayer.displayName} - Level ${primaryPlayer.level}`;
 
 class RushRunScene extends Phaser.Scene {
   constructor() {
@@ -27,9 +40,25 @@ class RushRunScene extends Phaser.Scene {
 
   create() {
     this.add.tileSprite(480, 352, 960, 128, 'track').setScrollFactor(0).setName('track');
+    this.aura = this.add.circle(
+      170,
+      292,
+      52,
+      colorNumber(primaryAvatar.secondaryColor, 0xff2ed1),
+      primaryAvatar.auraId === 'aura_electric' ? 0.22 : 0.08
+    );
     this.runner = this.physics.add.sprite(170, 286, 'runner');
+    this.runner.setTint(colorNumber(primaryAvatar.primaryColor));
     this.runner.setCollideWorldBounds(true);
     this.runner.body.setSize(44, 74).setOffset(14, 18);
+    this.trail = this.add.rectangle(
+      128,
+      310,
+      primaryAvatar.trailId === 'trail_comet' ? 100 : 74,
+      10,
+      colorNumber(primaryAvatar.trailId === 'trail_comet' ? primaryAvatar.accentColor : primaryAvatar.primaryColor, 0x00e5ff),
+      primaryAvatar.trailId === 'trail_comet' ? 0.58 : 0.36
+    );
 
     this.ground = this.add.rectangle(480, 374, 960, 10, 0x00e5ff, 0);
     this.physics.add.existing(this.ground, true);
@@ -60,6 +89,8 @@ class RushRunScene extends Phaser.Scene {
 
     const track = this.children.getByName('track');
     track.tilePositionX += seconds * this.speed;
+    this.aura.setPosition(this.runner.x, this.runner.y + 4);
+    this.trail.setPosition(this.runner.x - 42, this.runner.y + 26);
 
     const left = this.cursors.left.isDown || this.keys.A.isDown;
     const right = this.cursors.right.isDown || this.keys.D.isDown;
@@ -113,7 +144,8 @@ class RushRunScene extends Phaser.Scene {
     this.boosts += 1;
     this.score += 600;
     this.speed += 24;
-    this.cameras.main.flash(80, 43, 255, 138);
+    const flash = colorNumber(primaryAvatar.secondaryColor, 0xff2ed1);
+    this.cameras.main.flash(80, (flash >> 16) & 255, (flash >> 8) & 255, flash & 255);
   }
 
   tickClock() {

@@ -7,6 +7,11 @@ import {
 } from '../services/passportService.js';
 import { claimCabinetLoginSession } from '../services/qrPairingService.js';
 import { publishIntegrationEvent } from '../services/integrationEventService.js';
+import {
+  equipPlayerCosmetic,
+  getAvatarCatalog,
+  getPlayerAvatarInventory
+} from '../services/avatarCatalogService.js';
 
 export const playerRouter = express.Router();
 
@@ -48,6 +53,22 @@ playerRouter.get('/me', async (req, res, next) => {
   }
 });
 
+playerRouter.get('/avatar/catalog', async (_req, res, next) => {
+  try {
+    res.json(await getAvatarCatalog());
+  } catch (error) {
+    next(error);
+  }
+});
+
+playerRouter.get('/me/inventory', async (req, res, next) => {
+  try {
+    res.json({ inventory: await getPlayerAvatarInventory(getPlayerId(req)) });
+  } catch (error) {
+    next(error);
+  }
+});
+
 playerRouter.patch('/me/avatar', async (req, res, next) => {
   try {
     const profile = await updatePlayerAvatar(getPlayerId(req), req.body.avatar || req.body);
@@ -61,6 +82,27 @@ playerRouter.patch('/me/avatar', async (req, res, next) => {
       avatar: profile.avatar
     });
     res.json(redactPlayerProfile(profile));
+  } catch (error) {
+    next(error);
+  }
+});
+
+playerRouter.patch('/me/equipment', async (req, res, next) => {
+  try {
+    const result = await equipPlayerCosmetic(getPlayerId(req), req.body);
+    publishIntegrationEvent(req.app.locals.io, {
+      type: 'player.updated',
+      playerId: String(result.profile._id),
+      payload: { avatar: result.profile.avatar, equipped: result.inventory.equipped }
+    });
+    req.app.locals.io?.emit?.('player.profile.updated', {
+      playerId: String(result.profile._id),
+      avatar: result.profile.avatar
+    });
+    res.json({
+      ...redactPlayerProfile(result.profile),
+      inventory: result.inventory
+    });
   } catch (error) {
     next(error);
   }

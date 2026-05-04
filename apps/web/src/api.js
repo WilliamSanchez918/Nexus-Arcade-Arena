@@ -50,10 +50,22 @@ export const api = {
   getProfile() {
     return request('/api/player/me');
   },
+  getAvatarCatalog() {
+    return request('/api/player/avatar/catalog');
+  },
+  getInventory() {
+    return request('/api/player/me/inventory');
+  },
   updateAvatar(avatar) {
     return request('/api/player/me/avatar', {
       method: 'PATCH',
       body: JSON.stringify({ avatar })
+    });
+  },
+  equipCosmetic(slot, cosmeticId) {
+    return request('/api/player/me/equipment', {
+      method: 'PATCH',
+      body: JSON.stringify({ slot, cosmeticId })
     });
   },
   getStats() {

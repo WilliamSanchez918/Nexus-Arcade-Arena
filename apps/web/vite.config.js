@@ -10,7 +10,8 @@ export default defineConfig({
   plugins: [react()],
   build: {
     outDir: path.join(appRoot, 'dist'),
-    emptyOutDir: true
+    emptyOutDir: true,
+    chunkSizeWarningLimit: 1400
   },
   server: {
     proxy: {

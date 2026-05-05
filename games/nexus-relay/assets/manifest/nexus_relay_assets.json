@@ -1,0 +1,311 @@
+{
+  "manifestVersion": "nexus-relay-assets/v1",
+  "gameId": "nexus_relay",
+  "curatedFor": "Godot 4 adaptive 3D solo/co-op mission prototype",
+  "assetRoot": "res://assets/kenney",
+  "packs": [
+    {
+      "name": "ambientCG PBR Metal Materials",
+      "sourcePage": "https://ambientcg.com/",
+      "downloadUrl": "https://ambientcg.com/get?file={assetId}_1K-JPG.zip",
+      "license": "Creative Commons CC0",
+      "localLicense": "res://assets/licenses/ambientcg_LICENSE.txt",
+      "usage": [
+        "high-detail metal flooring",
+        "wall panel PBR maps",
+        "procedural prop and exosuit materials"
+      ],
+      "assetIds": [
+        "DiamondPlate005D",
+        "MetalPlates006",
+        "MetalPlates006_2K",
+        "Metal031"
+      ]
+    },
+    {
+      "name": "Quaternius Ultimate Space Kit",
+      "sourcePage": "https://quaternius.com/packs/ultimatespacekit.html",
+      "downloadUrl": "https://opengameart.org/sites/default/files/ultimate_space_kit-glb.zip",
+      "license": "Creative Commons CC0",
+      "localLicense": "res://assets/licenses/quaternius_ultimate-space-kit_LICENSE.txt",
+      "usage": [
+        "3D astronaut and mech player silhouettes",
+        "3D flying enemy and escort drone silhouettes",
+        "3D mission pickups and station dressing"
+      ]
+    },
+    {
+      "name": "Kenney Modular Space Kit",
+      "sourcePage": "https://kenney.nl/assets/modular-space-kit",
+      "downloadUrl": "https://opengameart.org/sites/default/files/kenney_modular-space-kit_1.0.zip",
+      "license": "Creative Commons CC0",
+      "localLicense": "res://assets/licenses/kenney_modular-space-kit_LICENSE.txt",
+      "usage": [
+        "3D station rooms",
+        "3D corridor modules",
+        "3D gates",
+        "3D cables and stairs"
+      ]
+    },
+    {
+      "name": "Kenney Animated Characters Protagonists",
+      "sourcePage": "https://kenney.nl/assets/animated-characters-protagonists",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/animated-characters-protagonists/857f73b6e7-1774773108/kenney_animated-characters-protagonists.zip",
+      "license": "Creative Commons CC0",
+      "localLicense": "res://assets/licenses/kenney_animated-characters-protagonists_LICENSE.txt",
+      "usage": [
+        "skinned 3D operator bodies",
+        "cyborg and criminal skin textures",
+        "future idle, run, and jump animation retargeting"
+      ]
+    },
+    {
+      "name": "Quaternius Universal Animation Library",
+      "sourcePage": "https://store.godotengine.org/asset/quaternius/universal-animation-library/",
+      "downloadUrl": "https://store.godotengine.org/asset/quaternius/universal-animation-library/download/44/",
+      "license": "Creative Commons CC0",
+      "localLicense": "res://assets/licenses/quaternius_universal-animation-library_LICENSE.txt",
+      "usage": [
+        "reference animation library downloaded by setup for future Godot retargeting",
+        "large source GLB is kept in .runtime instead of committed"
+      ]
+    },
+    {
+      "name": "Tomality Free Music Pack Sampler",
+      "sourcePage": "https://store.godotengine.org/asset/tomality/tomality-s-free-music-pack-sampler/",
+      "downloadUrl": "https://store.godotengine.org/asset/tomality/tomality-s-free-music-pack-sampler/download/1262/",
+      "license": "Royalty-free game use license",
+      "localLicense": "res://assets/licenses/tomality-free-music-pack-sampler_LICENSE.txt",
+      "usage": [
+        "arena background loop",
+        "finish-state loop candidate"
+      ]
+    },
+    {
+      "name": "Godot AI",
+      "sourcePage": "https://store.godotengine.org/asset/dlight/godot-ai/",
+      "downloadUrl": "https://store.godotengine.org/asset/dlight/godot-ai/download/1247/",
+      "license": "MIT",
+      "localLicense": "res://assets/licenses/godot-ai-plugin_LICENSE.txt",
+      "usage": [
+        "optional Godot editor utility installed under addons/godot_ai",
+        "not enabled at runtime"
+      ]
+    },
+    {
+      "name": "Glass Brick Scene Manager",
+      "sourcePage": "https://store.godotengine.org/asset/glass-brick/scene-manager/",
+      "downloadUrl": "https://github.com/glass-brick/Scene-Manager/archive/refs/tags/v1.2.0.zip",
+      "license": "MIT",
+      "localLicense": "res://assets/licenses/scene-manager_LICENSE.txt",
+      "usage": [
+        "SceneManager autoload for phase transition fades",
+        "shader pattern assets for attract, briefing, intermission, and results scenes"
+      ]
+    },
+    {
+      "name": "Kenney Sci-Fi RTS",
+      "sourcePage": "https://kenney.nl/assets/sci-fi-rts",
+      "downloadUrl": "https://opengameart.org/sites/default/files/kenney_rtssci-fi.zip",
+      "license": "Creative Commons CC0",
+      "localLicense": "res://assets/licenses/kenney_sci-fi-rts_LICENSE.txt",
+      "usage": [
+        "legacy 2D prototype tiles",
+        "future minimap and billboard detail candidates"
+      ]
+    },
+    {
+      "name": "Kenney Space Shooter Redux",
+      "sourcePage": "https://opengameart.org/content/space-shooter-redux",
+      "downloadUrl": "https://opengameart.org/sites/default/files/SpaceShooterRedux.zip",
+      "license": "Creative Commons CC0",
+      "localLicense": "res://assets/licenses/kenney_space-shooter-redux_LICENSE.txt",
+      "usage": [
+        "legacy 2D prototype effects",
+        "future HUD and billboard effect candidates"
+      ]
+    },
+    {
+      "name": "Kenney Interface Sounds",
+      "sourcePage": "https://kenney.nl/assets/interface-sounds",
+      "downloadUrl": "https://kenney.nl/media/pages/assets/interface-sounds/d23a84242e-1677589452/kenney_interface-sounds.zip",
+      "license": "Creative Commons CC0",
+      "localLicense": "res://assets/licenses/kenney_interface-sounds_LICENSE.txt",
+      "usage": [
+        "pickup feedback",
+        "mission success feedback",
+        "hazard and damage feedback"
+      ]
+    }
+  ],
+  "categories": {
+    "stationModels": {
+      "path": "res://assets/kenney/modular-space-kit/models",
+      "files": [
+        "room-small.glb",
+        "room-wide.glb",
+        "corridor.glb",
+        "corridor-corner.glb",
+        "corridor-wide.glb",
+        "gate.glb",
+        "gate-lasers.glb",
+        "cables.glb",
+        "stairs.glb",
+        "template-floor-big.glb",
+        "Textures/colormap.png"
+      ]
+    },
+    "pbrMaterials": {
+      "path": "res://assets/ambientcg",
+      "sets": {
+        "DiamondPlate005D": [
+          "DiamondPlate005D_1K-JPG_Color.jpg",
+          "DiamondPlate005D_1K-JPG_NormalGL.jpg",
+          "DiamondPlate005D_1K-JPG_Roughness.jpg",
+          "DiamondPlate005D_1K-JPG_Metalness.jpg",
+          "DiamondPlate005D_1K-JPG_AmbientOcclusion.jpg"
+        ],
+        "MetalPlates006": [
+          "MetalPlates006_1K-JPG_Color.jpg",
+          "MetalPlates006_1K-JPG_NormalGL.jpg",
+          "MetalPlates006_1K-JPG_Roughness.jpg",
+          "MetalPlates006_1K-JPG_Metalness.jpg"
+        ],
+        "MetalPlates006_2K": [
+          "MetalPlates006_2K-JPG_Color.jpg",
+          "MetalPlates006_2K-JPG_NormalGL.jpg",
+          "MetalPlates006_2K-JPG_Roughness.jpg",
+          "MetalPlates006_2K-JPG_Metalness.jpg"
+        ],
+        "Metal031": [
+          "Metal031_1K-JPG_Color.jpg",
+          "Metal031_1K-JPG_NormalGL.jpg",
+          "Metal031_1K-JPG_Roughness.jpg",
+          "Metal031_1K-JPG_Metalness.jpg"
+        ]
+      }
+    },
+    "quaterniusModels": {
+      "path": "res://assets/quaternius/ultimate-space-kit/models",
+      "files": [
+        "Astronaut.glb",
+        "Mech.glb",
+        "Enemy Flying.glb",
+        "Enemy Small.glb",
+        "Pickup Crate.glb",
+        "Pickup Key Card.glb",
+        "Pickup Sphere.glb",
+        "Pickup Thunder.glb",
+        "Round Rover.glb",
+        "Rover.glb",
+        "Base Large.glb",
+        "Building L.glb",
+        "Connector.glb",
+        "Geodesic Dome.glb",
+        "Metal Support.glb",
+        "Ramp.glb",
+        "Solar Panel.glb",
+        "Roof Radar.glb",
+        "Spaceship.glb"
+      ]
+    },
+    "animatedCharacters": {
+      "path": "res://assets/kenney/animated-characters-protagonists",
+      "files": [
+        "Model/characterMedium.fbx",
+        "Animations/idle.fbx",
+        "Animations/jump.fbx",
+        "Animations/run.fbx",
+        "Skins/cyborgFemaleA.png",
+        "Skins/criminalMaleA.png",
+        "Skins/skaterFemaleA.png",
+        "Skins/skaterMaleA.png"
+      ]
+    },
+    "tiles": {
+      "path": "res://assets/kenney/sci-fi-rts/tiles",
+      "pattern": "scifiTile_01.png..scifiTile_24.png"
+    },
+    "environment": {
+      "path": "res://assets/kenney/sci-fi-rts/environment",
+      "pattern": "scifiEnvironment_01.png..scifiEnvironment_12.png"
+    },
+    "structures": {
+      "path": "res://assets/kenney/sci-fi-rts/structures",
+      "pattern": "scifiStructure_01.png..scifiStructure_10.png"
+    },
+    "units": {
+      "path": "res://assets/kenney/sci-fi-rts/units",
+      "pattern": "scifiUnit_01.png..scifiUnit_12.png"
+    },
+    "enemies": {
+      "path": "res://assets/kenney/space-shooter/enemies",
+      "files": [
+        "enemyBlue1.png",
+        "enemyBlue2.png",
+        "enemyRed1.png",
+        "enemyGreen1.png"
+      ]
+    },
+    "effects": {
+      "path": "res://assets/kenney/space-shooter/effects",
+      "files": [
+        "shield1.png",
+        "shield2.png",
+        "shield3.png",
+        "star1.png",
+        "star2.png",
+        "star3.png",
+        "speed.png",
+        "fire00.png",
+        "fire01.png",
+        "fire02.png",
+        "fire03.png"
+      ]
+    },
+    "parts": {
+      "path": "res://assets/kenney/space-shooter/parts",
+      "files": [
+        "beam0.png",
+        "beam1.png",
+        "beam2.png",
+        "beamLong1.png",
+        "turretBase_big.png",
+        "turretBase_small.png"
+      ]
+    },
+    "interfaceSounds": {
+      "path": "res://assets/kenney/interface-sounds",
+      "files": [
+        "click_001.ogg",
+        "select_001.ogg",
+        "confirmation_001.ogg",
+        "error_001.ogg",
+        "switch_001.ogg",
+        "glitch_001.ogg",
+        "drop_001.ogg"
+      ]
+    },
+    "music": {
+      "path": "res://assets/music/tomality",
+      "files": [
+        "spinner_loop_1.ogg",
+        "overtime_loop_2.ogg"
+      ]
+    },
+    "godotAddons": {
+      "path": "res://addons",
+      "files": [
+        "godot_ai/plugin.cfg",
+        "scene_manager/plugin.cfg",
+        "scene_manager/SceneManager.tscn",
+        "scene_manager/SceneManager.gd",
+        "scene_manager/shader_patterns/radial.png",
+        "scene_manager/shader_patterns/curtains.png",
+        "scene_manager/shader_patterns/diagonal.png",
+        "scene_manager/shader_patterns/squares.png"
+      ]
+    }
+  },
+  "refreshScript": "scripts/setup-nexus-relay-assets.ps1"
+}

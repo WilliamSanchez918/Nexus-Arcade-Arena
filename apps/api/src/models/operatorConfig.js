@@ -2,11 +2,23 @@ import mongoose from 'mongoose';
 
 const OperatorConfigSchema = new mongoose.Schema({
   key: { type: String, required: true, unique: true, index: true },
+  tenant: {
+    tenantId: String,
+    tenantName: String,
+    deploymentEnvironment: String
+  },
   general: {
     siteId: String,
     cabinetId: String,
     appBaseUrl: String,
     apiBaseUrl: String
+  },
+  identity: {
+    provider: String,
+    supabaseProjectUrl: String,
+    issuer: String,
+    jwksUrl: String,
+    audience: String
   },
   security: {
     playerTwoFactorRequired: { type: Boolean, default: true },

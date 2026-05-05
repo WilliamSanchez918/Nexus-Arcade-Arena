@@ -138,6 +138,22 @@ button {
   border-radius: 8px;
 }
 
+.qr-url {
+  margin: -4px 0 0;
+  color: #aeb8ca;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.qr-url.warning {
+  color: #ffd400;
+  border: 1px solid rgba(255, 212, 0, 0.45);
+  border-radius: 6px;
+  background: rgba(255, 212, 0, 0.08);
+  padding: 10px;
+}
+
 .qr-placeholder {
   display: grid;
   place-items: center;

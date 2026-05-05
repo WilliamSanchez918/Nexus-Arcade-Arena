@@ -27,7 +27,7 @@ The integration test uses `mongodb://127.0.0.1:27017/nexus_arcade_test`, drops t
 - Authorization-code/PKCE token exchange
 - Token introspection
 - Cabinet QR pairing and P1 claim
-- Rush Run game session start/end
+- Nexus Relay game session start/end
 - XP award and leaderboard persistence
 
 For the full check:
@@ -46,7 +46,7 @@ The normal dev stack still uses the default API port `3000`:
 npm run dev
 ```
 
-If another Costley app is already using `3000`, use the preview stack instead. It starts the API on `3100`, web on `5173`, and Rush Run on `5175`:
+If another Costley app is already using `3000`, use the preview stack instead. It starts the API on `3100` and web on `5173`:
 
 ```powershell
 npm run preview
@@ -56,7 +56,6 @@ Then check:
 
 - API: `http://127.0.0.1:3100/healthz`
 - Player/operator web: `http://127.0.0.1:5173/`
-- Rush Run: `http://127.0.0.1:5175/`
 
 Run the HTTP smoke check while previews are running:
 
@@ -64,7 +63,7 @@ Run the HTTP smoke check while previews are running:
 npm run preview:smoke
 ```
 
-The Electron Hub can be previewed separately after the API and Rush Run are available:
+The Electron Hub can be previewed separately after the API is available. Configure `GODOT_NEXUS_RELAY_PATH` to launch a Godot export; otherwise the Hub uses the local simulator:
 
 ```powershell
 npm run preview:hub

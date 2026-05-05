@@ -16,11 +16,25 @@ import {
   createTwoFactorChallenge,
   verifyTwoFactorChallenge
 } from '../services/twoFactorService.js';
+import {
+  hasBearerToken,
+  playerProfileForManagedIdentityRequest
+} from '../services/managedIdentityService.js';
 
 export const playerRouter = express.Router();
 
-function getPlayerId(req) {
+function getLocalPlayerId(req) {
   return req.header('x-player-id') || req.body.playerId || req.query.playerId;
+}
+
+async function getPlayerId(req) {
+  if (hasBearerToken(req)) {
+    const profile = await playerProfileForManagedIdentityRequest(req, {
+      displayName: req.body.displayName
+    });
+    return String(profile._id);
+  }
+  return getLocalPlayerId(req);
 }
 
 playerRouter.post('/dev-login', async (req, res, next) => {
@@ -64,7 +78,30 @@ playerRouter.post('/dev-login/verify-2fa', async (req, res, next) => {
 
 playerRouter.post('/claim-cabinet-session', async (req, res, next) => {
   try {
-    res.json(await claimCabinetLoginSession(req.body, req.app.locals.io));
+    res.json(await claimCabinetLoginSession({
+      ...req.body,
+      playerId: await getPlayerId(req)
+    }, req.app.locals.io));
+  } catch (error) {
+    next(error);
+  }
+});
+
+playerRouter.post('/auth/session', async (req, res, next) => {
+  try {
+    const profile = await playerProfileForManagedIdentityRequest(req, {
+      displayName: req.body.displayName
+    });
+    publishIntegrationEvent(req.app.locals.io, {
+      type: 'player.updated',
+      playerId: String(profile._id),
+      payload: { displayName: profile.displayName, managedIdentityVerified: true }
+    });
+    res.json({
+      playerToken: String(profile._id),
+      authProvider: 'managed',
+      ...redactPlayerProfile(profile)
+    });
   } catch (error) {
     next(error);
   }
@@ -72,7 +109,7 @@ playerRouter.post('/claim-cabinet-session', async (req, res, next) => {
 
 playerRouter.get('/me', async (req, res, next) => {
   try {
-    const profile = await getPlayerProfile(getPlayerId(req));
+    const profile = await getPlayerProfile(await getPlayerId(req));
     res.json(redactPlayerProfile(profile));
   } catch (error) {
     next(error);
@@ -89,7 +126,7 @@ playerRouter.get('/avatar/catalog', async (_req, res, next) => {
 
 playerRouter.get('/me/inventory', async (req, res, next) => {
   try {
-    res.json({ inventory: await getPlayerAvatarInventory(getPlayerId(req)) });
+    res.json({ inventory: await getPlayerAvatarInventory(await getPlayerId(req)) });
   } catch (error) {
     next(error);
   }
@@ -97,7 +134,7 @@ playerRouter.get('/me/inventory', async (req, res, next) => {
 
 playerRouter.patch('/me/avatar', async (req, res, next) => {
   try {
-    const profile = await updatePlayerAvatar(getPlayerId(req), req.body.avatar || req.body);
+    const profile = await updatePlayerAvatar(await getPlayerId(req), req.body.avatar || req.body);
     publishIntegrationEvent(req.app.locals.io, {
       type: 'player.updated',
       playerId: String(profile._id),
@@ -115,7 +152,7 @@ playerRouter.patch('/me/avatar', async (req, res, next) => {
 
 playerRouter.patch('/me/equipment', async (req, res, next) => {
   try {
-    const result = await equipPlayerCosmetic(getPlayerId(req), req.body);
+    const result = await equipPlayerCosmetic(await getPlayerId(req), req.body);
     publishIntegrationEvent(req.app.locals.io, {
       type: 'player.updated',
       playerId: String(result.profile._id),
@@ -137,7 +174,7 @@ playerRouter.patch('/me/equipment', async (req, res, next) => {
 playerRouter.get('/me/stats', async (req, res, next) => {
   try {
     const { PlayerGameStats } = await import('../models/index.js');
-    const stats = await PlayerGameStats.find({ playerId: getPlayerId(req) }).lean();
+    const stats = await PlayerGameStats.find({ playerId: await getPlayerId(req) }).lean();
     res.json({ stats });
   } catch (error) {
     next(error);
@@ -147,7 +184,7 @@ playerRouter.get('/me/stats', async (req, res, next) => {
 playerRouter.get('/me/achievements', async (req, res, next) => {
   try {
     const { PlayerGameStats } = await import('../models/index.js');
-    const stats = await PlayerGameStats.find({ playerId: getPlayerId(req) }).lean();
+    const stats = await PlayerGameStats.find({ playerId: await getPlayerId(req) }).lean();
     const achievements = stats.flatMap((entry) => entry.achievements.map((achievement) => ({
       gameId: entry.gameId,
       ...achievement

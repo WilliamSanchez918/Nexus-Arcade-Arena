@@ -14,29 +14,36 @@ import { applyProgressionForResult } from './progressionService.js';
 import { toPublicPlayer } from './passportService.js';
 import { publishIntegrationEvent } from './integrationEventService.js';
 
-async function hydrateLaunchPlayer(input) {
+function launchAvatarTargetForGame(gameId) {
+  return gameId === 'nexus_relay' ? '3d' : '2d';
+}
+
+async function hydrateLaunchPlayer(input, { gameId } = {}) {
+  const avatarTarget = launchAvatarTargetForGame(gameId);
   if (!input?.playerId || input.playerId === 'guest') {
-    return guestPlayer(input?.slot || 'P1');
+    return guestPlayer(input?.slot || 'P1', { target: avatarTarget });
   }
   const profile = await PlayerProfile.findById(input.playerId);
   if (!profile) {
-    return guestPlayer(input.slot || 'P1');
+    return guestPlayer(input.slot || 'P1', { target: avatarTarget });
   }
   return {
     ...toPublicPlayer(profile),
     playerId: String(profile._id),
     slot: input.slot,
-    avatarRuntime: exportAvatarRuntimeManifest(profile.avatar, { target: '2d' })
+    avatarRuntime: exportAvatarRuntimeManifest(profile.avatar, { target: avatarTarget })
   };
 }
 
 export async function startGameSession(input, io) {
-  const players = await Promise.all((input.players || [guestPlayer('P1')]).map(hydrateLaunchPlayer));
+  const gameId = input.gameId || 'nexus_relay';
+  const players = await Promise.all((input.players || [guestPlayer('P1', { target: launchAvatarTargetForGame(gameId) })])
+    .map((player) => hydrateLaunchPlayer(player, { gameId })));
   const gameSession = await GameSession.create({
     cabinetId: input.cabinetId,
     siteId: input.siteId,
-    gameId: input.gameId || 'rush_run',
-    mode: input.mode || (players.length > 1 ? 'versus' : 'solo'),
+    gameId,
+    mode: input.mode || (players.length > 1 ? 'co-op' : 'solo'),
     startedAt: new Date(),
     players: players.map((player) => ({
       playerId: player.isGuest ? undefined : player.playerId,

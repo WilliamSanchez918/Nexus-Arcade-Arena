@@ -7,6 +7,7 @@ import {
   verifyOperatorLogin
 } from '../services/operatorAuthService.js';
 import {
+  deploymentHints,
   getOperatorConfig,
   updateOperatorConfig
 } from '../services/operatorConfigService.js';
@@ -33,7 +34,8 @@ operatorRouter.use(requireOperatorSession);
 
 operatorRouter.get('/config', async (_req, res, next) => {
   try {
-    res.json({ config: await getOperatorConfig() });
+    const config = await getOperatorConfig();
+    res.json({ config, deployment: deploymentHints(config) });
   } catch (error) {
     next(error);
   }
@@ -41,7 +43,8 @@ operatorRouter.get('/config', async (_req, res, next) => {
 
 operatorRouter.patch('/config', async (req, res, next) => {
   try {
-    res.json({ config: await updateOperatorConfig(req.body, req.operator?.operatorId) });
+    const config = await updateOperatorConfig(req.body, req.operator?.operatorId);
+    res.json({ config, deployment: deploymentHints(config) });
   } catch (error) {
     next(error);
   }

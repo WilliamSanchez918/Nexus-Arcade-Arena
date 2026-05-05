@@ -1,6 +1,15 @@
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3000';
+import { createClient } from '@supabase/supabase-js';
+
+function runtimeApiBaseUrl() {
+  const fromQuery = new URLSearchParams(window.location.search).get('apiBaseUrl');
+  return fromQuery || import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:3000';
+}
+
+export const API_BASE_URL = runtimeApiBaseUrl();
 const PLAYER_TOKEN_KEY = 'nexus.playerToken';
+const MANAGED_AUTH_TOKEN_KEY = 'nexus.managedAuthToken';
 const OPERATOR_TOKEN_KEY = 'nexus.operatorToken';
+let supabaseClient;
 
 export function getPlayerToken() {
   return window.localStorage.getItem(PLAYER_TOKEN_KEY);
@@ -14,6 +23,36 @@ export function setPlayerToken(token) {
 
 export function clearPlayerToken() {
   window.localStorage.removeItem(PLAYER_TOKEN_KEY);
+  window.localStorage.removeItem(MANAGED_AUTH_TOKEN_KEY);
+}
+
+export function getManagedAuthToken() {
+  return window.localStorage.getItem(MANAGED_AUTH_TOKEN_KEY);
+}
+
+export function setManagedAuthToken(token) {
+  if (token) {
+    window.localStorage.setItem(MANAGED_AUTH_TOKEN_KEY, token);
+  }
+}
+
+export function isManagedAuthEnabled() {
+  return import.meta.env.VITE_IDENTITY_PROVIDER === 'supabase'
+    && Boolean(import.meta.env.VITE_SUPABASE_URL)
+    && Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
+}
+
+export function getSupabaseClient() {
+  if (!isManagedAuthEnabled()) {
+    return null;
+  }
+  if (!supabaseClient) {
+    supabaseClient = createClient(
+      import.meta.env.VITE_SUPABASE_URL,
+      import.meta.env.VITE_SUPABASE_ANON_KEY
+    );
+  }
+  return supabaseClient;
 }
 
 export function getOperatorToken() {
@@ -39,6 +78,10 @@ async function request(path, options = {}) {
   if (playerToken) {
     headers['x-player-id'] = playerToken;
   }
+  const managedAuthToken = getManagedAuthToken();
+  if (managedAuthToken) {
+    headers.authorization = `Bearer ${managedAuthToken}`;
+  }
   const operatorToken = getOperatorToken();
   if (operatorToken) {
     headers['x-operator-token'] = operatorToken;
@@ -63,6 +106,12 @@ export const api = {
   },
   verifyPlayerTwoFactor(payload) {
     return request('/api/player/dev-login/verify-2fa', {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
+  },
+  createManagedPlayerSession(payload) {
+    return request('/api/player/auth/session', {
       method: 'POST',
       body: JSON.stringify(payload)
     });
@@ -100,7 +149,7 @@ export const api = {
   getStats() {
     return request('/api/player/me/stats');
   },
-  getLeaderboards(gameId = 'rush_run') {
+  getLeaderboards(gameId = 'nexus_relay') {
     return request(`/api/leaderboards/${gameId}?scope=global&limit=10`);
   },
   getOperatorCabinets() {

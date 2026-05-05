@@ -1,0 +1,4 @@
+﻿Quaternius Ultimate Space Kit
+Source: https://quaternius.com/packs/ultimatespacekit.html
+Mirror used by setup script: https://opengameart.org/content/ultimate-space-kit-by-quaternius
+License: Creative Commons CC0 1.0 Universal

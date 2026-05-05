@@ -1,8 +1,11 @@
 const targets = [
   ['API health', process.env.PREVIEW_API_URL || 'http://127.0.0.1:3100/healthz'],
-  ['Web app', process.env.PREVIEW_WEB_URL || 'http://127.0.0.1:5173/'],
-  ['Rush Run', process.env.PREVIEW_RUSH_URL || 'http://127.0.0.1:5175/']
+  ['Web app', process.env.PREVIEW_WEB_URL || 'http://127.0.0.1:5173/']
 ];
+
+if (process.env.PREVIEW_LEGACY_GAME_URL) {
+  targets.push(['Legacy browser fallback', process.env.PREVIEW_LEGACY_GAME_URL]);
+}
 
 let failed = false;
 

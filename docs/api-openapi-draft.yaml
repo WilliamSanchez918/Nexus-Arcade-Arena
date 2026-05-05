@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: Nexus Arcade Hub and Player Passport API
   version: 0.1.0
-  description: Pilot V1 API for cabinet QR login, player profiles, game sessions, progression, and leaderboards.
+  description: Pilot V1 API for online cabinet QR pairing, player profiles, game sessions, progression, and leaderboards. QR pairing URLs carry only a cabinet session ID; player identity proof comes from the phone-authenticated request.
 servers:
   - url: http://localhost:3000
 paths:
@@ -31,7 +31,7 @@ paths:
           description: 2FA challenge created
   /api/player/dev-login/verify-2fa:
     post:
-      summary: Verify Player Passport 2FA challenge and return player token
+      summary: Verify local-dev Player Passport 2FA challenge and return development player token
       responses:
         "200":
           description: Player Passport ready
@@ -111,7 +111,9 @@ paths:
           description: Scope-filtered profile, avatar, stats, achievements, and leaderboard data
   /api/player/claim-cabinet-session:
     post:
-      summary: Claim a cabinet QR session for a Player Passport
+      summary: Claim an online cabinet QR session for a phone-authenticated Player Passport
+      security:
+        - PlayerSession: []
       responses:
         "200":
           description: Player assigned to cabinet slot
@@ -174,6 +176,10 @@ components:
       type: apiKey
       in: header
       name: x-operator-token
+    PlayerSession:
+      type: apiKey
+      in: header
+      name: x-player-id
     PassportBearer:
       type: http
       scheme: bearer

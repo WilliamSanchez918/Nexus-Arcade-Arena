@@ -8,6 +8,10 @@ import {
 } from '../services/qrPairingService.js';
 import { startGameSession, endGameSession } from '../services/gameSessionService.js';
 import { recordHeartbeat } from '../services/heartbeatService.js';
+import {
+  hasBearerToken,
+  playerProfileForManagedIdentityRequest
+} from '../services/managedIdentityService.js';
 
 export const arcadeRouter = express.Router();
 
@@ -87,7 +91,13 @@ arcadeRouter.post('/cabinet/:cabinetId/heartbeat', async (req, res, next) => {
 
 arcadeRouter.post('/player/claim-cabinet-session', async (req, res, next) => {
   try {
-    res.json(await claimCabinetLoginSession(req.body, req.app.locals.io));
+    const managedProfile = hasBearerToken(req)
+      ? await playerProfileForManagedIdentityRequest(req, { displayName: req.body.displayName })
+      : null;
+    res.json(await claimCabinetLoginSession({
+      ...req.body,
+      playerId: managedProfile ? String(managedProfile._id) : req.header('x-player-id') || req.body.playerId
+    }, req.app.locals.io));
   } catch (error) {
     next(error);
   }

@@ -30,8 +30,11 @@ import {
   api,
   clearOperatorToken,
   clearPlayerToken,
+  getSupabaseClient,
   getOperatorToken,
   getPlayerToken,
+  isManagedAuthEnabled,
+  setManagedAuthToken,
   setOperatorToken,
   setPlayerToken
 } from './api.js';
@@ -61,7 +64,8 @@ function Shell({ children, title = 'Nexus Player Passport' }) {
   const hasPlayerToken = Boolean(getPlayerToken());
   const hasOperatorToken = Boolean(getOperatorToken());
 
-  function signOut() {
+  async function signOut() {
+    await getSupabaseClient()?.auth.signOut();
     clearPlayerToken();
     clearOperatorToken();
     window.location.reload();
@@ -103,8 +107,11 @@ function AvatarChip({ avatar = defaultAvatar, label, level }) {
 }
 
 function LoginForm({ onLogin, compact = false }) {
+  const managedAuth = isManagedAuthEnabled();
   const [displayName, setDisplayName] = useState('');
   const [contact, setContact] = useState('');
+  const [password, setPassword] = useState('');
+  const [authMode, setAuthMode] = useState('sign-in');
   const [challenge, setChallenge] = useState(null);
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -112,6 +119,10 @@ function LoginForm({ onLogin, compact = false }) {
 
   async function submit(event) {
     event.preventDefault();
+    if (managedAuth) {
+      await submitManagedAuth();
+      return;
+    }
     setBusy(true);
     setError('');
     try {
@@ -123,6 +134,39 @@ function LoginForm({ onLogin, compact = false }) {
       });
       setChallenge(result);
       setCode(result.devCode || '');
+    } catch (loginError) {
+      setError(loginError.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function submitManagedAuth() {
+    setBusy(true);
+    setError('');
+    try {
+      const cleanName = normalizeDisplayName(displayName);
+      const supabase = getSupabaseClient();
+      const email = contact.trim().toLowerCase();
+      const authResult = authMode === 'create'
+        ? await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { display_name: cleanName } }
+        })
+        : await supabase.auth.signInWithPassword({ email, password });
+
+      if (authResult.error) {
+        throw authResult.error;
+      }
+      const session = authResult.data.session;
+      if (!session?.access_token) {
+        throw new Error('Supabase session was not returned. Check email confirmation settings for this project.');
+      }
+      setManagedAuthToken(session.access_token);
+      const result = await api.createManagedPlayerSession({ displayName: cleanName });
+      setPlayerToken(result.playerToken);
+      onLogin?.(result);
     } catch (loginError) {
       setError(loginError.message);
     } finally {
@@ -175,34 +219,58 @@ function LoginForm({ onLogin, compact = false }) {
         <input maxLength="24" value={displayName} onChange={(event) => setDisplayName(event.target.value)} />
       </label>
       <label>
-        Email or phone
-        <input value={contact} onChange={(event) => setContact(event.target.value)} />
+        {managedAuth ? 'Email' : 'Email or phone'}
+        <input type={managedAuth ? 'email' : 'text'} value={contact} onChange={(event) => setContact(event.target.value)} />
       </label>
+      {managedAuth ? (
+        <>
+          <label>
+            Password
+            <input minLength="6" type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
+          </label>
+          <div className="slot-row">
+            <button className={authMode === 'sign-in' ? 'segmented active' : 'segmented'} onClick={() => setAuthMode('sign-in')} type="button">Sign in</button>
+            <button className={authMode === 'create' ? 'segmented active' : 'segmented'} onClick={() => setAuthMode('create')} type="button">Create</button>
+          </div>
+        </>
+      ) : null}
       {error ? <p className="error">{error}</p> : null}
-      <button className="primary-button" disabled={busy || !normalizeDisplayName(displayName)} type="submit">
+      <button className="primary-button" disabled={busy || !normalizeDisplayName(displayName) || (managedAuth && (!contact.includes('@') || password.length < 6))} type="submit">
         <LogIn size={18} />
-        {busy ? 'Signing in' : 'Continue'}
+        {busy ? 'Signing in' : managedAuth ? (authMode === 'create' ? 'Create Passport' : 'Sign in') : 'Continue'}
       </button>
     </form>
   );
 }
 
 function PhoneLoginPage({ sessionId }) {
-  const token = useMemo(() => new URLSearchParams(window.location.search).get('token'), []);
   const [profile, setProfile] = useState(null);
   const [claim, setClaim] = useState(null);
   const [slot, setSlot] = useState('auto');
-  const status = useAsyncData(() => api.getLoginStatus(sessionId), [sessionId]);
+  const status = useAsyncData(() => (
+    sessionId ? api.getLoginStatus(sessionId) : Promise.resolve(null)
+  ), [sessionId]);
 
   async function claimSlot() {
-    const playerId = getPlayerToken();
     const result = await api.claimCabinetSession({
       sessionId,
-      token,
-      playerId,
       desiredSlot: slot
     });
     setClaim(result);
+  }
+
+  if (!sessionId) {
+    return (
+      <Shell title="Join Cabinet">
+        <section className="login-layout">
+          <div className="panel hero-panel">
+            <Gamepad2 size={34} />
+            <h2>Missing cabinet session</h2>
+            <p>This claim link does not include a cabinet pairing session. Generate a fresh QR code from the cabinet.</p>
+          </div>
+        </section>
+      </Shell>
+    );
   }
 
   return (
@@ -241,7 +309,7 @@ function PhoneLoginPage({ sessionId }) {
                 </button>
               ))}
             </div>
-            <button className="primary-button" disabled={!token || Boolean(claim)} onClick={claimSlot} type="button">
+            <button className="primary-button" disabled={Boolean(claim)} onClick={claimSlot} type="button">
               <BadgeCheck size={18} />
               {claim ? `Claimed ${claim.playerSlot}` : 'Claim cabinet'}
             </button>
@@ -1309,7 +1377,7 @@ function ProfilePage() {
   const catalog = useAsyncData(() => api.getAvatarCatalog(), []);
   const inventory = useAsyncData(() => (getPlayerToken() ? api.getInventory() : Promise.resolve({ inventory: null })), []);
   const stats = useAsyncData(() => (getPlayerToken() ? api.getStats() : Promise.resolve({ stats: [] })), []);
-  const leaders = useAsyncData(() => api.getLeaderboards('rush_run'), []);
+  const leaders = useAsyncData(() => api.getLeaderboards('nexus_relay'), []);
 
   useEffect(() => {
     if (profile.data?.player?.avatar) {
@@ -1505,7 +1573,7 @@ function ProfilePage() {
           </dl>
         </div>
         <div className="panel wide">
-          <h2><Trophy size={22} /> Rush Run leaderboard</h2>
+          <h2><Trophy size={22} /> Nexus Relay leaderboard</h2>
           <ol className="leaderboard">
             {(leaders.data?.entries || []).map((entry) => (
               <li key={`${entry.playerId}-${entry.score}-${entry.achievedAt}`}>
@@ -1605,9 +1673,23 @@ function secondsToMinutesLabel(seconds) {
   return `${Math.round(Number(seconds || 0) / 60)} min`;
 }
 
+function isLoopbackUrl(value) {
+  try {
+    const { hostname } = new URL(value);
+    return hostname === 'localhost' || hostname === '127.0.0.1' || hostname === '::1' || hostname.startsWith('127.');
+  } catch {
+    return false;
+  }
+}
+
 function OperatorConfigPanel({ configState }) {
   const [draft, setDraft] = useState(null);
   const [saveState, setSaveState] = useState('');
+  const deployment = configState.data?.deployment || {};
+  const qrPreviewUrl = draft?.general?.appBaseUrl
+    ? `${draft.general.appBaseUrl.replace(/\/$/, '')}/play/claim?session={sessionId}`
+    : '';
+  const appBaseUrlIsLoopback = draft?.general?.appBaseUrl ? isLoopbackUrl(draft.general.appBaseUrl) : false;
 
   useEffect(() => {
     if (configState.data?.config) {
@@ -1631,6 +1713,7 @@ function OperatorConfigPanel({ configState }) {
     setSaveState('Saving');
     try {
       const result = await api.updateOperatorConfig({
+        tenant: draft.tenant,
         general: draft.general,
         security: {
           twoFactorTtlSeconds: Number(draft.security.twoFactorTtlSeconds),
@@ -1641,6 +1724,7 @@ function OperatorConfigPanel({ configState }) {
         qr: {
           qrTokenTtlSeconds: Number(draft.qr.qrTokenTtlSeconds)
         },
+        identity: draft.identity,
         oauth: draft.oauth
       });
       setDraft(result.config);
@@ -1667,19 +1751,78 @@ function OperatorConfigPanel({ configState }) {
         <button className="icon-button" onClick={configState.refresh} title="Reload configuration" type="button"><RefreshCcw size={18} /></button>
       </div>
       <div className="config-summary">
+        <div><strong>Tenant</strong><span>{draft.tenant?.tenantName || draft.tenant?.tenantId}</span></div>
+        <div><strong>Environment</strong><span>{draft.tenant?.deploymentEnvironment}</span></div>
+        <div><strong>Identity</strong><span>{draft.identity?.provider || 'local-dev'}</span></div>
         <div><strong>Player 2FA</strong><span>Required</span></div>
-        <div><strong>Operator 2FA</strong><span>Required</span></div>
-        <div><strong>QR TTL</strong><span>{secondsToMinutesLabel(draft.qr.qrTokenTtlSeconds)}</span></div>
-        <div><strong>Operator session</strong><span>{secondsToMinutesLabel(draft.security.operatorSessionTtlSeconds)}</span></div>
+        <div><strong>QR session TTL</strong><span>{secondsToMinutesLabel(draft.qr.qrTokenTtlSeconds)}</span></div>
       </div>
       <section className="config-section">
-        <h3>Site defaults</h3>
+        <h3>Tenant and deployment</h3>
+        <div className="config-grid">
+          <label>Tenant ID <input value={draft.tenant?.tenantId || ''} onChange={(event) => updateDraft('tenant', 'tenantId', event.target.value)} /></label>
+          <label>Tenant name <input value={draft.tenant?.tenantName || ''} onChange={(event) => updateDraft('tenant', 'tenantName', event.target.value)} /></label>
+          <label>Environment
+            <select value={draft.tenant?.deploymentEnvironment || 'local'} onChange={(event) => updateDraft('tenant', 'deploymentEnvironment', event.target.value)}>
+              <option value="local">local</option>
+              <option value="staging">staging</option>
+              <option value="production">production</option>
+            </select>
+          </label>
+        </div>
+      </section>
+      <section className="config-section">
+        <h3>Site and cabinet</h3>
         <div className="config-grid">
           <label>Site ID <input value={draft.general.siteId} onChange={(event) => updateDraft('general', 'siteId', event.target.value)} /></label>
           <label>Default cabinet <input value={draft.general.cabinetId} onChange={(event) => updateDraft('general', 'cabinetId', event.target.value)} /></label>
+        </div>
+      </section>
+      <section className="config-section">
+        <h3>Network URLs</h3>
+        <div className="config-grid">
           <label>App base URL <input value={draft.general.appBaseUrl} onChange={(event) => updateDraft('general', 'appBaseUrl', event.target.value)} /></label>
           <label>API base URL <input value={draft.general.apiBaseUrl} onChange={(event) => updateDraft('general', 'apiBaseUrl', event.target.value)} /></label>
+          <label>OAuth issuer <input value={draft.oauth.issuer} onChange={(event) => updateDraft('oauth', 'issuer', event.target.value)} /></label>
         </div>
+        {deployment.suggestedAppBaseUrls?.length ? (
+          <div className="suggestion-row">
+            <strong>Suggested app URL</strong>
+            {deployment.suggestedAppBaseUrls.slice(0, 3).map((url) => (
+              <button className="secondary-button" key={url} onClick={() => updateDraft('general', 'appBaseUrl', url)} type="button">{url}</button>
+            ))}
+          </div>
+        ) : null}
+        {deployment.suggestedApiBaseUrls?.length ? (
+          <div className="suggestion-row">
+            <strong>Suggested API URL</strong>
+            {deployment.suggestedApiBaseUrls.slice(0, 3).map((url) => (
+              <button className="secondary-button" key={url} onClick={() => updateDraft('general', 'apiBaseUrl', url)} type="button">{url}</button>
+            ))}
+          </div>
+        ) : null}
+        <div className={appBaseUrlIsLoopback ? 'config-warning' : 'config-ok'}>
+          <strong>QR preview</strong>
+          <span>{qrPreviewUrl}</span>
+        </div>
+        {(deployment.warnings || []).map((warning) => <p className="config-warning" key={warning}>{warning}</p>)}
+      </section>
+      <section className="config-section">
+        <h3>Cloud identity</h3>
+        <div className="config-grid">
+          <label>Identity provider
+            <select value={draft.identity?.provider || 'local-dev'} onChange={(event) => updateDraft('identity', 'provider', event.target.value)}>
+              <option value="local-dev">local-dev</option>
+              <option value="supabase">supabase</option>
+              <option value="managed-auth">managed-auth</option>
+            </select>
+          </label>
+          <label>Supabase project URL <input value={draft.identity?.supabaseProjectUrl || ''} onChange={(event) => updateDraft('identity', 'supabaseProjectUrl', event.target.value)} /></label>
+          <label>JWT issuer <input value={draft.identity?.issuer || ''} onChange={(event) => updateDraft('identity', 'issuer', event.target.value)} /></label>
+          <label>JWKS URL <input value={draft.identity?.jwksUrl || ''} onChange={(event) => updateDraft('identity', 'jwksUrl', event.target.value)} /></label>
+          <label>JWT audience <input value={draft.identity?.audience || 'authenticated'} onChange={(event) => updateDraft('identity', 'audience', event.target.value)} /></label>
+        </div>
+        <p className="muted-copy">QR claims require online identity. Local-dev is only for development; production should use Supabase or another managed provider.</p>
       </section>
       <section className="config-section">
         <h3>Security policy</h3>
@@ -1697,8 +1840,7 @@ function OperatorConfigPanel({ configState }) {
       <section className="config-section">
         <h3>QR and integration</h3>
         <div className="config-grid">
-          <label>QR token TTL seconds <input min="60" max="1800" type="number" value={draft.qr.qrTokenTtlSeconds} onChange={(event) => updateDraft('qr', 'qrTokenTtlSeconds', event.target.value)} /></label>
-          <label>OAuth issuer <input value={draft.oauth.issuer} onChange={(event) => updateDraft('oauth', 'issuer', event.target.value)} /></label>
+          <label>QR session TTL seconds <input min="60" max="1800" type="number" value={draft.qr.qrTokenTtlSeconds} onChange={(event) => updateDraft('qr', 'qrTokenTtlSeconds', event.target.value)} /></label>
         </div>
       </section>
       {saveState ? <p className="client-secret">{saveState}</p> : null}
@@ -1964,6 +2106,10 @@ function OAuthAuthorizePage() {
 
 function App() {
   const path = window.location.pathname;
+  if (path === '/play/claim') {
+    const sessionId = new URLSearchParams(window.location.search).get('session');
+    return <PhoneLoginPage sessionId={sessionId} />;
+  }
   if (path.startsWith('/play/login/')) {
     return <PhoneLoginPage sessionId={path.split('/').pop()} />;
   }

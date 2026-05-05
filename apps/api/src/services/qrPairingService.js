@@ -5,15 +5,26 @@ import {
   PlayerProfile
 } from '../models/index.js';
 import { config } from '../config.js';
-import { generatePairingCode, hashToken, randomToken, safeEqualHash } from './tokenService.js';
+import { generatePairingCode } from './tokenService.js';
 import { toPublicPlayer } from './passportService.js';
 import { publishIntegrationEvent } from './integrationEventService.js';
-import { getQrRuntimeConfig } from './operatorConfigService.js';
+import { getQrRuntimeConfig, isLoopbackUrl } from './operatorConfigService.js';
 
-function buildQrUrl({ sessionId, token, appBaseUrl = config.appBaseUrl }) {
-  const url = new URL(`/play/login/${sessionId}`, appBaseUrl);
-  url.searchParams.set('token', token);
+function buildQrUrl({ sessionId, appBaseUrl = config.appBaseUrl }) {
+  const url = new URL('/play/claim', appBaseUrl);
+  url.searchParams.set('session', sessionId);
   return url.toString();
+}
+
+function qrWarnings({ qrUrl, appBaseUrl, apiBaseUrl }) {
+  const warnings = [];
+  if (isLoopbackUrl(appBaseUrl) || isLoopbackUrl(qrUrl)) {
+    warnings.push('This QR points at a loopback URL. It will work only on this computer; phones need a LAN or public HTTPS App base URL.');
+  }
+  if (isLoopbackUrl(apiBaseUrl)) {
+    warnings.push('The QR login page would call a loopback API URL. Set API base URL to a LAN or public HTTPS URL for phone login.');
+  }
+  return warnings;
 }
 
 function chooseAvailableSlot(cabinet, desiredSlot = 'auto') {
@@ -26,7 +37,6 @@ function chooseAvailableSlot(cabinet, desiredSlot = 'auto') {
 
 export async function createCabinetLoginSession({ cabinetId, siteId, desiredSlot = 'auto' }) {
   const runtimeConfig = await getQrRuntimeConfig();
-  const token = randomToken();
   const pairingCode = generatePairingCode();
   const expiresAt = new Date(Date.now() + runtimeConfig.qrTokenTtlSeconds * 1000);
 
@@ -35,7 +45,6 @@ export async function createCabinetLoginSession({ cabinetId, siteId, desiredSlot
     siteId,
     desiredSlot,
     pairingCode,
-    qrTokenHash: hashToken(token),
     expiresAt
   });
 
@@ -45,7 +54,10 @@ export async function createCabinetLoginSession({ cabinetId, siteId, desiredSlot
     { upsert: true }
   );
 
-  const qrUrl = buildQrUrl({ sessionId: session._id, token, appBaseUrl: runtimeConfig.appBaseUrl });
+  const qrUrl = buildQrUrl({
+    sessionId: session._id,
+    appBaseUrl: runtimeConfig.appBaseUrl
+  });
   const qrDataUrl = await QRCode.toDataURL(qrUrl, { margin: 1, width: 512 });
 
   return {
@@ -55,11 +67,14 @@ export async function createCabinetLoginSession({ cabinetId, siteId, desiredSlot
       cabinetId,
       siteId,
       status: session.status,
+      identityMode: 'cloud',
+      requiresOnlineIdentity: true,
       desiredSlot,
       expiresAt: expiresAt.toISOString(),
       pairingCode,
       qrUrl,
-      qrDataUrl
+      qrDataUrl,
+      qrWarnings: qrWarnings({ qrUrl, appBaseUrl: runtimeConfig.appBaseUrl, apiBaseUrl: runtimeConfig.apiBaseUrl })
     }
   };
 }
@@ -82,6 +97,8 @@ export async function getCabinetLoginStatus(sessionId) {
     cabinetId: session.cabinetId,
     siteId: session.siteId,
     status: session.status,
+    identityMode: 'cloud',
+    requiresOnlineIdentity: true,
     desiredSlot: session.desiredSlot,
     playerSlot: session.playerSlot,
     expiresAt: session.expiresAt.toISOString(),
@@ -90,7 +107,7 @@ export async function getCabinetLoginStatus(sessionId) {
   };
 }
 
-export async function claimCabinetLoginSession({ sessionId, token, playerId, desiredSlot }, io) {
+export async function claimCabinetLoginSession({ sessionId, playerId, desiredSlot }, io) {
   const session = await CabinetLoginSession.findById(sessionId);
   if (!session) {
     const error = new Error('Cabinet login session not found');
@@ -109,8 +126,11 @@ export async function claimCabinetLoginSession({ sessionId, token, playerId, des
     error.statusCode = 410;
     throw error;
   }
-  if (!safeEqualHash(hashToken(token), session.qrTokenHash)) {
-    const error = new Error('Invalid pairing token');
+
+  // The QR identifies only the short-lived cabinet pairing session. Player proof
+  // comes from the phone-authenticated request, not from data embedded in the QR.
+  if (!playerId) {
+    const error = new Error('Authenticated player session required');
     error.statusCode = 401;
     throw error;
   }

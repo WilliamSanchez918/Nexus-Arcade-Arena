@@ -80,7 +80,7 @@ test('Player Passport pilot flow works against Mongo', async () => {
     body: JSON.stringify({
       security: { twoFactorTtlSeconds: 120, twoFactorMaxAttempts: 3 },
       qr: { qrTokenTtlSeconds: 120 },
-      general: { appBaseUrl: baseUrl }
+      general: { appBaseUrl: baseUrl, apiBaseUrl: baseUrl }
     })
   });
   assert.equal(updatedConfig.response.status, 200);
@@ -235,13 +235,17 @@ test('Player Passport pilot flow works against Mongo', async () => {
   assert.equal(pairing.response.status, 201, JSON.stringify(pairing.body));
   const pairingTtlSeconds = (Date.parse(pairing.body.expiresAt) - Date.now()) / 1000;
   assert.ok(pairingTtlSeconds <= 125);
-  const pairingToken = new URL(pairing.body.qrUrl).searchParams.get('token');
+  const pairingUrl = new URL(pairing.body.qrUrl);
+  assert.equal(pairingUrl.pathname, '/play/claim');
+  assert.equal(pairingUrl.searchParams.get('session'), pairing.body.sessionId);
+  assert.equal(pairingUrl.searchParams.has('token'), false);
+  assert.equal(pairingUrl.searchParams.has('apiBaseUrl'), false);
+  assert.equal(pairing.body.requiresOnlineIdentity, true);
   const claim = await request('/api/player/claim-cabinet-session', {
     method: 'POST',
+    headers: { 'x-player-id': playerId },
     body: JSON.stringify({
       sessionId: pairing.body.sessionId,
-      token: pairingToken,
-      playerId,
       desiredSlot: 'P1'
     })
   });
@@ -253,14 +257,17 @@ test('Player Passport pilot flow works against Mongo', async () => {
     body: JSON.stringify({
       cabinetId: 'PREVIEW-CAB',
       siteId: 'HQ',
-      gameId: 'rush_run',
-      mode: 'solo',
-      players: [{ slot: 'P1', playerId }]
+      gameId: 'nexus_relay',
+      mode: 'co-op',
+      players: [{ slot: 'P1', playerId }, { slot: 'P2', playerId: 'guest' }]
     })
   });
   assert.equal(start.response.status, 201);
   assert.equal(start.body.launchPayload.players[0].avatarRuntime.manifestVersion, 'nexus-avatar-manifest/v1');
+  assert.equal(start.body.launchPayload.players[0].avatarRuntime.target, '3d');
   assert.equal(start.body.launchPayload.players[0].avatarRuntime.equipment.body, 'body_street_legend');
+  assert.equal(start.body.launchPayload.players[0].avatarRuntime.rendering.rig, 'kenney-animated-character');
+  assert.equal(start.body.launchPayload.players[1].avatarRuntime.target, '3d');
 
   const startedAt = new Date(Date.now() - 45_000).toISOString();
   const endedAt = new Date().toISOString();
@@ -268,13 +275,16 @@ test('Player Passport pilot flow works against Mongo', async () => {
     idempotencyKey: 'preview-integration-result-0001',
     cabinetId: 'PREVIEW-CAB',
     siteId: 'HQ',
-    gameId: 'rush_run',
+    gameId: 'nexus_relay',
     gameSessionId: start.body.gameSessionId,
-    mode: 'solo',
+    mode: 'co-op',
     startedAt,
     endedAt,
     durationSeconds: 45,
-    players: [{ slot: 'P1', playerId, displayName: 'Preview Pilot', score: 4800, result: 'win', telemetry: { boosts: 4 } }],
+    players: [
+      { slot: 'P1', playerId, displayName: 'Preview Pilot', score: 4800, result: 'win', telemetry: { objectives: 2 } },
+      { slot: 'P2', playerId: 'guest', displayName: 'GUEST', score: 4200, result: 'win', telemetry: { assists: 2 } }
+    ],
     telemetry: { source: 'integration-test' },
     nonce: 'preview-nonce-0001'
   };
@@ -289,7 +299,7 @@ test('Player Passport pilot flow works against Mongo', async () => {
   assert.equal(end.body.awards[0].playerId, playerId);
   assert.ok(end.body.awards[0].xpAwarded > 0);
 
-  const leaderboard = await request('/api/leaderboards/rush_run?scope=global&limit=5');
+  const leaderboard = await request('/api/leaderboards/nexus_relay?scope=global&limit=5');
   assert.equal(leaderboard.response.status, 200);
   assert.equal(leaderboard.body.entries[0].displayName, 'Preview Pilot');
   assert.equal(leaderboard.body.entries[0].score, 4800);
@@ -299,7 +309,7 @@ test('Player Passport pilot flow works against Mongo', async () => {
   });
   assert.equal(passportResource.response.status, 200);
   assert.equal(passportResource.body.avatar.equipment.body, 'body_street_legend');
-  assert.equal(passportResource.body.stats[0].gameId, 'rush_run');
+  assert.equal(passportResource.body.stats[0].gameId, 'nexus_relay');
   assert.equal(passportResource.body.stats[0].bestScore, 4800);
   assert.equal(passportResource.body.leaderboards[0].score, 4800);
 });

@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const PLAYER_SLOTS = ['P1', 'P2'];
 export const GAME_MODES = ['solo', 'versus', 'co-op', 'guest'];
 export const QR_LOGIN_STATUSES = ['pending', 'claimed', 'expired', 'cancelled'];
+export const CABINET_IDENTITY_MODES = ['cloud', 'guest'];
 export const TWO_FACTOR_PURPOSES = ['player_login', 'operator_login'];
 export const AVATAR_BODY_TYPES = ['hero', 'street', 'runner', 'android', 'guardian'];
 export const AVATAR_EQUIPMENT_SLOTS = [
@@ -156,6 +157,14 @@ export const AvatarRuntimeManifestSchema = z.object({
     emoteId: z.string().min(1),
     animationSet: z.string().min(1)
   }),
+  rendering: z.object({
+    rig: z.string().min(1),
+    model: z.string().min(1),
+    bodyId: z.string().min(1),
+    skin: z.string().min(1).optional(),
+    animationSet: z.string().min(1).optional(),
+    engineHints: z.record(z.unknown()).default({})
+  }).optional(),
   addons: z.array(AvatarAddonSchema).default([]),
   compatibility: z.object({
     supportedSlots: z.array(AvatarEquipmentSlotSchema),
@@ -216,11 +225,14 @@ export const CabinetLoginSessionSchema = z.object({
   cabinetId: z.string().min(1),
   siteId: z.string().min(1),
   status: z.enum(QR_LOGIN_STATUSES),
+  identityMode: z.enum(CABINET_IDENTITY_MODES).default('cloud'),
+  requiresOnlineIdentity: z.boolean().default(true),
   desiredSlot: z.union([PlayerSlotSchema, z.literal('auto')]).default('auto'),
   playerSlot: PlayerSlotSchema.optional(),
   expiresAt: z.string().datetime(),
   qrUrl: z.string().url().optional(),
   qrDataUrl: z.string().optional(),
+  qrWarnings: z.array(z.string()).default([]),
   pairingCode: z.string().min(4).optional(),
   player: PublicPlayerSchema.optional()
 });
@@ -378,6 +390,55 @@ export function describePassportScopes(scopes = []) {
   return PASSPORT_SCOPE_CATALOG.filter((item) => requested.has(item.scope));
 }
 
+const godotSkinByBodyId = Object.freeze({
+  body_neon_hero: 'cyborg',
+  body_runner_core: 'skater_female',
+  body_street_legend: 'criminal',
+  body_synth_athlete: 'skater_male',
+  body_android_prime: 'cyborg',
+  body_guardian_frame: 'criminal'
+});
+
+const godotScaleByBodyId = Object.freeze({
+  body_neon_hero: 0.45,
+  body_runner_core: 0.44,
+  body_street_legend: 0.445,
+  body_synth_athlete: 0.47,
+  body_android_prime: 0.465,
+  body_guardian_frame: 0.5
+});
+
+const godotSkinTextureBySkin = Object.freeze({
+  cyborg: 'cyborgFemaleA.png',
+  criminal: 'criminalMaleA.png',
+  skater_female: 'skaterFemaleA.png',
+  skater_male: 'skaterMaleA.png'
+});
+
+function avatar3dRenderingHints(avatar) {
+  const skin = godotSkinByBodyId[avatar.bodyId] || godotSkinByBodyId.body_neon_hero;
+  const skinTexture = godotSkinTextureBySkin[skin] || godotSkinTextureBySkin.cyborg;
+  return {
+    rig: 'kenney-animated-character',
+    model: 'characterMedium',
+    bodyId: avatar.bodyId,
+    skin,
+    animationSet: 'kenney-protagonist',
+    engineHints: {
+      godot: {
+        modelPath: 'res://assets/kenney/animated-characters-protagonists/Model/characterMedium.fbx',
+        skinTexture: `res://assets/kenney/animated-characters-protagonists/Skins/${skinTexture}`,
+        animations: {
+          idle: 'res://assets/kenney/animated-characters-protagonists/Animations/idle.fbx',
+          run: 'res://assets/kenney/animated-characters-protagonists/Animations/run.fbx',
+          jump: 'res://assets/kenney/animated-characters-protagonists/Animations/jump.fbx'
+        },
+        scale: godotScaleByBodyId[avatar.bodyId] || godotScaleByBodyId.body_neon_hero
+      }
+    }
+  };
+}
+
 export function exportAvatarRuntimeManifest(avatarInput = defaultAvatar, { target = 'shared' } = {}) {
   const avatarSource = typeof avatarInput?.toObject === 'function'
     ? avatarInput.toObject()
@@ -420,6 +481,7 @@ export function exportAvatarRuntimeManifest(avatarInput = defaultAvatar, { targe
       emoteId: avatar.emoteId,
       animationSet: avatar.animationSet
     },
+    ...(target === '3d' || target === 'shared' ? { rendering: avatar3dRenderingHints(avatar) } : {}),
     addons: avatar.addons.filter((addon) => addon.enabled),
     compatibility: {
       supportedSlots: [...AVATAR_EQUIPMENT_SLOTS],
@@ -440,14 +502,14 @@ export function publicPlayerFromProfile(profile, overrides = {}) {
   });
 }
 
-export function guestPlayer(slot = 'P1') {
+export function guestPlayer(slot = 'P1', { target = '2d' } = {}) {
   const avatar = { ...defaultAvatar, avatarId: 'guest_bot', badgeId: 'guest' };
   return GamePlayerPayloadSchema.parse({
     slot,
     playerId: 'guest',
     displayName: 'GUEST',
     avatar,
-    avatarRuntime: exportAvatarRuntimeManifest(avatar, { target: '2d' }),
+    avatarRuntime: exportAvatarRuntimeManifest(avatar, { target }),
     level: 1,
     isGuest: true
   });

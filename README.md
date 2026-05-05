@@ -13,7 +13,8 @@ Fresh scaffold for Nexus Arcade Hub and Nexus Player Passport.
 - `apps/hub` - Electron + Vite React cabinet Hub.
 - `packages/shared` - integration contracts, DTO validation, XP rules, and game payload schemas (`nexus-arcade-shared`).
 - `tools/game-simulator` - Godot-compatible CLI simulator for local game contract tests.
-- `apps/rush-run` - first playable browser version of Rush Run using the same Player Passport launch/result contract.
+- `games/nexus-relay` - Godot 4 source for the adaptive 3D solo/co-op mission game.
+- `apps/rush-run` - legacy browser fallback kept for build compatibility while Godot becomes the primary game runtime.
 - `docs` - pilot checklist and integration notes.
 
 ## Quick start
@@ -25,15 +26,36 @@ npm run mongo:up
 npm run dev
 ```
 
-The API defaults to `http://localhost:3000`, the phone/operator web app to `http://localhost:5173`, the Hub renderer to `http://localhost:5174`, and Rush Run to `http://localhost:5175`.
+For a clean Windows setup that also refreshes the Nexus Relay Godot assets and verifies Godot on PATH:
+
+```powershell
+npm run first-run
+```
+
+To run setup and open the preview services plus the Electron Hub:
+
+```powershell
+npm run first-run:start
+```
+
+The API and phone/operator web app prefer a LAN-reachable URL when no explicit base URL is configured. The local defaults still use ports `3000` for the API, `5173` for the phone/operator web app, and `5174` for the Hub renderer.
+
+To run the Player Passport flow against local Supabase Auth:
+
+```powershell
+npm run supabase:setup
+npm run dev:supabase
+```
+
+`supabase:setup` starts the local Supabase Docker stack and writes the local Auth URL/JWKS/anon key into `.env`. The Nexus API still stores Player Passport profile, avatar, XP, stats, and game data in MongoDB during this phase; Supabase is used for player proof of identity.
 
 Local V1 logins require a 6-digit 2FA challenge. In development, `EXPOSE_DEV_2FA_CODES=true` returns the code in the API response/UI so the flow can be tested without email or SMS infrastructure. The default local operator credentials are `OPERATOR_ID=operator` and `OPERATOR_PIN=000000`; change them in `.env` for any shared environment.
 
-The operator console includes a protected Configuration view for site defaults, 2FA challenge policy, QR TTL, and OAuth issuer settings. These values are persisted in MongoDB and the API reads the relevant settings at runtime.
+The operator console is available at `/operator/config` after operator login. It includes tenant identity, deployment environment, site/cabinet defaults, app/API base URLs, QR URL preview, cloud identity provider settings, 2FA challenge policy, QR session TTL, and OAuth issuer settings. These values are persisted in MongoDB and the API reads the relevant settings at runtime. QR codes use the configured App base URL and only carry the cabinet pairing session ID; for phones, set the App base URL to a LAN or public HTTPS URL rather than `localhost`.
 
-## Rush Run / Godot handoff
+## Nexus Relay / Godot Handoff
 
-Set `GODOT_RUSH_RUN_PATH` to the exported Rush Run executable. The Hub passes:
+Set `GODOT_NEXUS_RELAY_PATH` to the exported Nexus Relay executable. The Hub passes:
 
 ```text
 --nexus-session-payload <jsonPath> --nexus-result-callback <localUrl>
@@ -41,9 +63,17 @@ Set `GODOT_RUSH_RUN_PATH` to the exported Rush Run executable. The Hub passes:
 
 If no executable path is configured, service tests use `tools/game-simulator` to validate the same contract without Godot installed.
 
-The web Rush Run preview consumes `launchPayload.players[].avatarRuntime`, renders the runner from the versioned Passport avatar contract, and includes avatar contract telemetry in signed score results. Godot builds should follow the same runtime manifest instead of coupling to cabinet-only player state.
+The Godot runtime consumes `launchPayload.players[].avatarRuntime`, applies Player Passport display names and avatar colors, runs a player-join countdown, then reports `solo` or `co-op` based on the joined player count. Game builds should follow the same runtime manifest instead of coupling to cabinet-only player state.
+
+The curated Nexus Relay asset set now includes Kenney station modules, Quaternius GLB gameplay silhouettes, and ambientCG PBR materials. Procedural-generation rules and the refresh script are documented in `docs/nexus-relay-asset-pipeline.md`.
 
 ## Player Passport integration boundary
+
+Player Passport is cloud-first. Player identity belongs in Supabase Auth or another managed cloud identity provider, while Nexus stores profile, avatar, XP, stats, achievements, game sessions, and leaderboard data in the cloud application database. MongoDB may store application data, but it is not the identity provider.
+
+Cabinets do not store passwords or long-lived player auth tokens. When online, a cabinet displays a short-lived QR pairing session such as `/play/claim?session=<sessionId>`. The phone authenticates with the cloud identity provider, claims P1 or P2 through the Nexus API, and the cabinet receives only display name, avatar manifest, level, slot, and cabinet-scoped session data.
+
+Offline mode is guest/cache/queue only. If internet drops after a player is already logged in, the cabinet can continue that active session for a limited grace window and queue the result. If the cabinet is offline before login, new Player Passport login is disabled and only guest play plus local/offline-pending scores are allowed.
 
 Other systems should integrate through `packages/shared` schemas and the `/api/player`, `/api/arcade`, `/api/auth`, `/oauth`, and `/api/leaderboards` APIs. Cabinet-specific behavior stays in `apps/hub`; reusable identity, avatar, progression, session, auth-client, token, and leaderboard contracts live in shared/API code.
 
@@ -64,7 +94,7 @@ OAuth-style endpoints:
 - `POST /oauth/introspect`
 - `GET /api/passport/me`
 
-Passport access tokens are scope-filtered. `GET /api/passport/me` returns only the profile, avatar runtime manifest, stats, achievements, or leaderboard data granted to the OAuth/auth client. Avatar runtime manifests are versioned as `nexus-avatar-manifest/v1` so Rush Run and future 2D/3D games can consume the same equipment, color, morphology, add-on, and emote contract.
+Passport access tokens are scope-filtered. `GET /api/passport/me` returns only the profile, avatar runtime manifest, stats, achievements, or leaderboard data granted to the OAuth/auth client. Avatar runtime manifests are versioned as `nexus-avatar-manifest/v1` so Nexus Relay and future 2D/3D games can consume the same equipment, color, morphology, add-on, and emote contract.
 
 ## Repository hygiene
 

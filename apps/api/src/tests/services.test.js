@@ -16,7 +16,7 @@ import {
   generateTwoFactorCode,
   maskDestination
 } from '../services/twoFactorService.js';
-import { defaultOperatorConfig } from '../services/operatorConfigService.js';
+import { defaultOperatorConfig, deploymentHints } from '../services/operatorConfigService.js';
 import {
   AvatarRuntimeManifestSchema,
   describePassportScopes,
@@ -101,6 +101,9 @@ test('avatar catalog exposes starter equipment for game-safe manifests', () => {
   assert.equal(catalogIds.has('emote_air_guitar'), true);
   assert.equal(catalogIds.has('emote_high_score'), true);
   assert.equal(catalogIds.has('boots_hover_soles'), true);
+  const androidBody = avatarCatalogItems.find((item) => item.cosmeticId === 'body_android_prime');
+  assert.equal(androidBody.asset3d.godot.rig, 'kenney-animated-character');
+  assert.equal(androidBody.asset3d.godot.model, 'characterMedium');
 });
 
 test('avatar runtime manifests are versioned for 2D and 3D consumers', () => {
@@ -108,6 +111,8 @@ test('avatar runtime manifests are versioned for 2D and 3D consumers', () => {
   assert.equal(runtimeManifest.manifestVersion, 'nexus-avatar-manifest/v1');
   assert.equal(runtimeManifest.target, '3d');
   assert.equal(runtimeManifest.equipment.hair, 'hair_glowhawk');
+  assert.equal(runtimeManifest.rendering.rig, 'kenney-animated-character');
+  assert.equal(runtimeManifest.rendering.engineHints.godot.modelPath.endsWith('characterMedium.fbx'), true);
   assert.equal(runtimeManifest.compatibility.supportedTargets.includes('2d'), true);
   assert.equal(AvatarRuntimeManifestSchema.safeParse(runtimeManifest).success, true);
 });
@@ -126,8 +131,26 @@ test('two-factor helpers generate six-digit codes and masked delivery hints', ()
 
 test('operator configuration defaults keep 2FA enforcement enabled', () => {
   const defaults = defaultOperatorConfig();
+  assert.equal(defaults.tenant.tenantId, 'local-tenant');
   assert.equal(defaults.security.playerTwoFactorRequired, true);
   assert.equal(defaults.security.operatorTwoFactorRequired, true);
   assert.equal(defaults.security.clientManagementRequiresOperator2fa, true);
+  assert.equal(defaults.identity.provider, 'local-dev');
   assert.ok(defaults.qr.qrTokenTtlSeconds >= 60);
+});
+
+test('operator deployment hints flag loopback QR configuration', () => {
+  const hints = deploymentHints({
+    ...defaultOperatorConfig(),
+    general: {
+      siteId: 'SITE',
+      cabinetId: 'CAB',
+      appBaseUrl: 'http://localhost:5173',
+      apiBaseUrl: 'http://127.0.0.1:3000'
+    }
+  });
+
+  assert.equal(hints.appBaseUrlIsLoopback, true);
+  assert.equal(hints.apiBaseUrlIsLoopback, true);
+  assert.ok(hints.warnings[0].includes('QR codes'));
 });

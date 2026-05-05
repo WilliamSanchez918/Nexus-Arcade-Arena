@@ -21,7 +21,10 @@ export const avatarCatalogItems = Object.freeze([
     rarity: 'common',
     compatibleBodyTypes: ['hero'],
     asset2d: { shape: 'hero-silhouette' },
-    asset3d: { primitive: 'human-hero-rig' },
+    asset3d: {
+      primitive: 'human-hero-rig',
+      godot: { rig: 'kenney-animated-character', model: 'characterMedium', skin: 'cyborg', scale: 0.45 }
+    },
     preview: { swatch: '#00E5FF' },
     sortOrder: 5
   },
@@ -34,7 +37,10 @@ export const avatarCatalogItems = Object.freeze([
     rarity: 'common',
     compatibleBodyTypes: ['runner'],
     asset2d: { shape: 'runner-silhouette' },
-    asset3d: { primitive: 'athletic-rig' },
+    asset3d: {
+      primitive: 'athletic-rig',
+      godot: { rig: 'kenney-animated-character', model: 'characterMedium', skin: 'skater_female', scale: 0.44 }
+    },
     preview: { swatch: '#00E5FF' },
     sortOrder: 10
   },
@@ -47,7 +53,10 @@ export const avatarCatalogItems = Object.freeze([
     rarity: 'common',
     compatibleBodyTypes: ['street'],
     asset2d: { shape: 'street-silhouette' },
-    asset3d: { primitive: 'lean-human-rig' },
+    asset3d: {
+      primitive: 'lean-human-rig',
+      godot: { rig: 'kenney-animated-character', model: 'characterMedium', skin: 'criminal', scale: 0.445 }
+    },
     preview: { swatch: '#FF2ED1' },
     sortOrder: 12
   },
@@ -60,7 +69,10 @@ export const avatarCatalogItems = Object.freeze([
     rarity: 'rare',
     compatibleBodyTypes: ['runner'],
     asset2d: { shape: 'athlete-silhouette' },
-    asset3d: { primitive: 'athletic-human-rig' },
+    asset3d: {
+      primitive: 'athletic-human-rig',
+      godot: { rig: 'kenney-animated-character', model: 'characterMedium', skin: 'skater_male', scale: 0.47 }
+    },
     preview: { swatch: '#FFD400' },
     sortOrder: 14
   },
@@ -73,7 +85,10 @@ export const avatarCatalogItems = Object.freeze([
     rarity: 'rare',
     compatibleBodyTypes: ['android'],
     asset2d: { shape: 'android-silhouette' },
-    asset3d: { primitive: 'plated-rig' },
+    asset3d: {
+      primitive: 'plated-rig',
+      godot: { rig: 'kenney-animated-character', model: 'characterMedium', skin: 'cyborg', scale: 0.465 }
+    },
     preview: { swatch: '#8B2CFF' },
     unlockRule: { xpRequired: 250 },
     sortOrder: 20
@@ -87,7 +102,10 @@ export const avatarCatalogItems = Object.freeze([
     rarity: 'rare',
     compatibleBodyTypes: ['guardian'],
     asset2d: { shape: 'guardian-silhouette' },
-    asset3d: { primitive: 'broad-human-rig' },
+    asset3d: {
+      primitive: 'broad-human-rig',
+      godot: { rig: 'kenney-animated-character', model: 'characterMedium', skin: 'criminal', scale: 0.5 }
+    },
     preview: { swatch: '#25FF9A' },
     sortOrder: 22
   },
@@ -417,7 +435,7 @@ export const avatarCatalogItems = Object.freeze([
     colorMasks: ['accent'],
     asset2d: { layer: 'champion-helmet' },
     asset3d: { primitive: 'full-trophy-helmet' },
-    unlockRule: { achievementId: 'rush_run_top_10' },
+    unlockRule: { achievementId: 'nexus_relay_top_10' },
     sortOrder: 60
   },
   {

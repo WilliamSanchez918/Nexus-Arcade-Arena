@@ -61,13 +61,13 @@ function HubApp() {
     setStatus('Creating QR login');
     const session = await window.nexusHub.createLoginSession(desiredSlot);
     setLoginSession(session);
-    setStatus(`Pairing code ${session.pairingCode}`);
+    setStatus((session.qrWarnings || []).length ? session.qrWarnings[0] : `Pairing code ${session.pairingCode}`);
   }
 
-  async function launchRushRun() {
-    setStatus('Launching Rush Run');
-    const launch = await window.nexusHub.launchRushRun();
-    setStatus(launch.usingWebGame ? 'Rush Run web game launched' : launch.usingSimulator ? 'Simulator launched' : 'Rush Run launched');
+  async function launchNexusRelay() {
+    setStatus('Launching Nexus Relay');
+    const launch = await window.nexusHub.launchNexusRelay();
+    setStatus(launch.usingGodotProject ? 'Nexus Relay Godot project launched' : launch.usingSimulator ? 'Nexus Relay simulator launched' : 'Nexus Relay launched');
   }
 
   async function resetSlot(slot) {
@@ -96,7 +96,7 @@ function HubApp() {
       <header className="hub-header">
         <div>
           <h1>Nexus Arcade Hub</h1>
-          <p>Scan in, load your avatar, launch Rush Run.</p>
+          <p>Scan in, load your avatars, launch adaptive 3D missions.</p>
         </div>
         <button className="icon-button" onClick={() => setOperatorOpen((value) => !value)} title="Operator menu" type="button">
           <MonitorCog />
@@ -110,16 +110,17 @@ function HubApp() {
             <span>{loginSession?.pairingCode || 'PAIRING'}</span>
           </div>
           {loginSession?.qrDataUrl ? <img alt="Player Passport QR" src={loginSession.qrDataUrl} /> : <div className="qr-placeholder">QR</div>}
+          {loginSession?.qrUrl ? <p className={loginSession.qrWarnings?.length ? 'qr-url warning' : 'qr-url'}>{loginSession.qrUrl}</p> : null}
           <button className="primary-button" onClick={() => createLogin('auto')} type="button">
             <RefreshCcw size={20} /> New QR
           </button>
         </div>
         <div className="attract-copy">
           <h2>Player Passport</h2>
-          <p>Returning players keep avatar, XP, best scores, achievements, and unlocks across cabinets.</p>
+          <p>Launch solo or let a second player join during the Nexus Relay countdown.</p>
           <div className="status-strip">{status}</div>
-          <button className="launch-button" onClick={launchRushRun} type="button">
-            <Rocket size={26} /> Launch Rush Run
+          <button className="launch-button" onClick={launchNexusRelay} type="button">
+            <Rocket size={26} /> Launch Nexus Relay
           </button>
         </div>
       </section>
@@ -158,7 +159,7 @@ function HubApp() {
 
       <footer>
         <Gamepad2 size={18} />
-        <span>{config?.cabinetId} · {config?.siteId} · {config?.hasRushRunPath ? 'Godot export configured' : 'Rush Run web fallback available'}</span>
+        <span>{config?.cabinetId} - {config?.siteId} - {config?.hasNexusRelayPath ? 'Nexus Relay export configured' : config?.hasNexusRelayProject ? 'Godot project launch available' : 'Simulator fallback available'}</span>
       </footer>
     </main>
   );

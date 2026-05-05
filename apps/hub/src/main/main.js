@@ -1,11 +1,11 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, ipcMain } from 'electron';
 import os from 'node:os';
 import { io as createSocketClient } from 'socket.io-client';
 import { hubConfig } from './config.js';
 import { createHubWindow } from './window.js';
 import { HubApiClient } from './apiClient.js';
 import { createGameCallbackServer } from '../services/gameCallbackServer.js';
-import { buildWebGameUrl, launchGame } from '../services/gameLauncher.js';
+import { launchGame } from '../services/gameLauncher.js';
 import { enqueueSyncItem, flushSyncQueue } from '../services/syncQueue.js';
 
 const api = new HubApiClient({ apiBaseUrl: hubConfig.apiBaseUrl });
@@ -41,8 +41,8 @@ function registerIpc() {
     cabinetId: hubConfig.cabinetId,
     siteId: hubConfig.siteId,
     apiBaseUrl: hubConfig.apiBaseUrl,
-    hasRushRunPath: Boolean(hubConfig.godotRushRunPath),
-    rushRunWebUrl: hubConfig.rushRunWebUrl,
+    hasNexusRelayPath: Boolean(hubConfig.godotNexusRelayPath),
+    hasNexusRelayProject: Boolean(hubConfig.godotNexusRelayProjectPath),
     gameCallbackPort: hubConfig.gameCallbackPort
   }));
 
@@ -56,48 +56,33 @@ function registerIpc() {
 
   ipcMain.handle('hub:logout-player', async (_event, slot) => api.logoutPlayer(hubConfig.cabinetId, slot));
 
-  ipcMain.handle('hub:launch-rush-run', async () => {
+  async function launchNexusRelay() {
     const active = await api.getActivePlayers(hubConfig.cabinetId);
-    const players = active.activePlayers?.length
-      ? active.activePlayers.map((player) => ({ slot: player.slot, playerId: player.playerId }))
+    const activePlayers = (active.activePlayers || []).filter((player) => player?.slot && player?.playerId);
+    const players = activePlayers.length > 0
+      ? activePlayers.map((player) => ({ slot: player.slot, playerId: player.playerId }))
       : [{ slot: 'P1', playerId: 'guest' }];
     const start = await api.startGameSession({
       cabinetId: hubConfig.cabinetId,
       siteId: hubConfig.siteId,
-      gameId: 'rush_run',
-      mode: players.length > 1 ? 'versus' : 'solo',
+      gameId: 'nexus_relay',
+      mode: players.length > 1 ? 'co-op' : 'solo',
       players
     });
     const { callbackUrl } = await ensureCallbackServer();
-    if (!hubConfig.godotRushRunPath && hubConfig.rushRunWebUrl) {
-      const gameUrl = buildWebGameUrl({
-        webUrl: hubConfig.rushRunWebUrl,
-        launchPayload: start.launchPayload,
-        callbackUrl,
-        callbackSecret: hubConfig.gameCallbackSecret
-      });
-      const gameWindow = new BrowserWindow({
-        width: 1280,
-        height: 720,
-        fullscreen: false,
-        autoHideMenuBar: true,
-        backgroundColor: '#060a14'
-      });
-      await gameWindow.loadURL(gameUrl);
-      return {
-        usingWebGame: true,
-        usingSimulator: false,
-        url: gameUrl
-      };
-    }
     return launchGame({
       launchPayload: start.launchPayload,
-      executablePath: hubConfig.godotRushRunPath,
+      executablePath: hubConfig.godotNexusRelayPath,
+      godotCommand: hubConfig.godotCommand,
+      godotProjectPath: hubConfig.godotNexusRelayProjectPath,
       callbackUrl,
       callbackSecret: hubConfig.gameCallbackSecret,
       runtimeDir: hubConfig.runtimeDir
     });
-  });
+  }
+
+  ipcMain.handle('hub:launch-nexus-relay', launchNexusRelay);
+  ipcMain.handle('hub:launch-rush-run', launchNexusRelay);
 
   ipcMain.handle('hub:diagnostics', async () => ({
     cabinetId: hubConfig.cabinetId,

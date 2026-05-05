@@ -20,7 +20,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -142,7 +143,8 @@ label {
   margin-bottom: 16px;
 }
 
-input {
+input,
+select {
   width: 100%;
   min-height: 44px;
   color: #f6f8ff;
@@ -678,6 +680,45 @@ input {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.suggestion-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+}
+
+.suggestion-row strong {
+  color: #aeb8ca;
+}
+
+.config-warning,
+.config-ok {
+  display: grid;
+  gap: 5px;
+  margin: 12px 0 0;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-wrap: anywhere;
+}
+
+.config-warning {
+  color: #ffd400;
+  border: 1px solid rgba(255, 212, 0, 0.45);
+  background: rgba(255, 212, 0, 0.08);
+}
+
+.config-ok {
+  color: #73fbd3;
+  border: 1px solid rgba(115, 251, 211, 0.36);
+  background: rgba(115, 251, 211, 0.08);
+}
+
+.config-warning span,
+.config-ok span {
+  color: #f6f8ff;
 }
 
 .toggle-row {

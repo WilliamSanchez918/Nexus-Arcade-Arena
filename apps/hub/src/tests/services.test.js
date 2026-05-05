@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { buildLaunchCommand, buildWebGameUrl } from '../services/gameLauncher.js';
+import { buildGodotProjectCommand, buildLaunchCommand, buildWebGameUrl } from '../services/gameLauncher.js';
 import {
   enqueueSyncItem,
   flushSyncQueue,
@@ -12,13 +12,13 @@ import {
 
 test('Godot command includes payload and callback arguments', () => {
   const command = buildLaunchCommand({
-    executablePath: 'C:/Games/RushRun/RushRun.exe',
+    executablePath: 'C:/Games/NexusRelay/NexusRelay.exe',
     payloadPath: 'C:/tmp/session.json',
     callbackUrl: 'http://127.0.0.1:43871/nexus/game-result'
   });
 
   assert.equal(command.usingSimulator, false);
-  assert.equal(command.command, 'C:/Games/RushRun/RushRun.exe');
+  assert.equal(command.command, 'C:/Games/NexusRelay/NexusRelay.exe');
   assert.deepEqual(command.args, [
     '--nexus-session-payload',
     'C:/tmp/session.json',
@@ -38,6 +38,28 @@ test('simulator fallback uses node when no Godot export is configured', () => {
   assert.equal(command.args.includes('--nexus-session-payload'), true);
 });
 
+test('Godot project command launches local project with user payload args', () => {
+  const command = buildGodotProjectCommand({
+    godotCommand: 'godot',
+    projectPath: 'E:/repo/games/nexus-relay',
+    payloadPath: 'payload.json',
+    callbackUrl: 'http://callback'
+  });
+
+  assert.equal(command.usingGodotProject, true);
+  assert.equal(command.usingSimulator, false);
+  assert.equal(command.command, 'godot');
+  assert.deepEqual(command.args, [
+    '--path',
+    'E:/repo/games/nexus-relay',
+    '--',
+    '--nexus-session-payload',
+    'payload.json',
+    '--nexus-result-callback',
+    'http://callback'
+  ]);
+});
+
 test('web game URL embeds launch payload and callback details', () => {
   const url = buildWebGameUrl({
     webUrl: 'http://127.0.0.1:5175',
@@ -46,7 +68,7 @@ test('web game URL embeds launch payload and callback details', () => {
     launchPayload: {
       cabinetId: 'CAB',
       siteId: 'SITE',
-      gameId: 'rush_run',
+      gameId: 'nexus_relay',
       gameSessionId: 'SESSION',
       mode: 'solo',
       issuedAt: new Date().toISOString(),

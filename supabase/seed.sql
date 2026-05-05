@@ -1,0 +1,2 @@
+-- Local Supabase Auth is the V1 identity test surface.
+-- Player Passport profile/game data remains in the Nexus API database for now.

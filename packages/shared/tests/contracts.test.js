@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   AvatarManifestSchema,
+  CabinetLoginSessionSchema,
   GameLaunchPayloadSchema,
   GameResultPayloadSchema,
   guestPlayer,
@@ -30,7 +31,7 @@ test('game launch payload validates the Godot handoff contract', () => {
   const payload = GameLaunchPayloadSchema.parse({
     cabinetId: 'NEXUS-CAB-001',
     siteId: 'COSTLEY-HQ',
-    gameId: 'rush_run',
+    gameId: 'nexus_relay',
     gameSessionId: 'session-1',
     mode: 'versus',
     issuedAt: new Date().toISOString(),
@@ -42,12 +43,29 @@ test('game launch payload validates the Godot handoff contract', () => {
   assert.equal(payload.players[0].avatarRuntime.target, '2d');
 });
 
+test('cabinet login sessions can include QR deployment warnings', () => {
+  const session = CabinetLoginSessionSchema.parse({
+    sessionId: 'session-1',
+    cabinetId: 'NEXUS-CAB-001',
+    siteId: 'COSTLEY-HQ',
+    status: 'pending',
+    desiredSlot: 'auto',
+    expiresAt: new Date().toISOString(),
+    qrUrl: 'https://arcade.costleyentertainment.com/play/claim?session=session-1',
+    qrWarnings: ['Loopback URL']
+  });
+
+  assert.equal(session.qrWarnings.length, 1);
+  assert.equal(session.requiresOnlineIdentity, true);
+  assert.equal(new URL(session.qrUrl).searchParams.has('token'), false);
+});
+
 test('game result signature is stable and excludes the signature field', () => {
   const payload = GameResultPayloadSchema.parse({
     idempotencyKey: 'idem-123456',
     cabinetId: 'NEXUS-CAB-001',
     siteId: 'COSTLEY-HQ',
-    gameId: 'rush_run',
+    gameId: 'nexus_relay',
     gameSessionId: 'session-1',
     mode: 'solo',
     startedAt: new Date(Date.now() - 1000).toISOString(),

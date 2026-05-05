@@ -36,10 +36,10 @@ async function main() {
       playerId: player.playerId,
       displayName: player.displayName,
       score: 1500 + index * 750,
-      result: index === 0 ? 'win' : 'finished',
-      telemetry: { boosts: 3 + index, collisions: index }
+      result: 'win',
+      telemetry: { objectives: 1 + index, assists: 2, damageTaken: index }
     })),
-    telemetry: { simulator: true, build: 'local' },
+    telemetry: { simulator: true, build: 'local', source: 'nexus-relay-simulator', completedMissions: 3, totalMissions: 3 },
     nonce: crypto.randomUUID()
   });
   const signedResult = {

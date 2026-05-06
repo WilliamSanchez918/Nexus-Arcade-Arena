@@ -38,6 +38,8 @@ if ((Test-Path -LiteralPath $envPath) -and (Test-Path -LiteralPath $envExamplePa
 }
 
 npm run setup:nexus-relay-assets
+npm run supabase:setup
+npm run security:startup
 
 $godotCommand = Get-Command godot -ErrorAction SilentlyContinue
 $wingetGodot = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links\godot_console.exe"

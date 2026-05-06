@@ -1808,13 +1808,13 @@ function OperatorConfigPanel({ configState }) {
         {(deployment.warnings || []).map((warning) => <p className="config-warning" key={warning}>{warning}</p>)}
       </section>
       <section className="config-section">
-        <h3>Cloud identity</h3>
+        <h3>Nexus identity</h3>
         <div className="config-grid">
-          <label>Identity provider
+          <label>Auth backend
             <select value={draft.identity?.provider || 'local-dev'} onChange={(event) => updateDraft('identity', 'provider', event.target.value)}>
               <option value="local-dev">local-dev</option>
               <option value="supabase">supabase</option>
-              <option value="managed-auth">managed-auth</option>
+              <option value="managed-auth">managed-auth / future OIDC</option>
             </select>
           </label>
           <label>Supabase project URL <input value={draft.identity?.supabaseProjectUrl || ''} onChange={(event) => updateDraft('identity', 'supabaseProjectUrl', event.target.value)} /></label>
@@ -1822,7 +1822,7 @@ function OperatorConfigPanel({ configState }) {
           <label>JWKS URL <input value={draft.identity?.jwksUrl || ''} onChange={(event) => updateDraft('identity', 'jwksUrl', event.target.value)} /></label>
           <label>JWT audience <input value={draft.identity?.audience || 'authenticated'} onChange={(event) => updateDraft('identity', 'audience', event.target.value)} /></label>
         </div>
-        <p className="muted-copy">QR claims require online identity. Local-dev is only for development; production should use Supabase or another managed provider.</p>
+        <p className="muted-copy">QR claims require online Nexus identity. Local-dev is only for development; production should use Nexus Player Passport backed by Supabase Auth.</p>
       </section>
       <section className="config-section">
         <h3>Security policy</h3>

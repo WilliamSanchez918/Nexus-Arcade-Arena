@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { hashToken, safeEqualHash, generatePairingCode } from '../services/tokenService.js';
 import { createApp } from '../app.js';
+import { config } from '../config.js';
+import { runtimeSecurityFindings } from '../securityStartup.js';
 import {
   normalizeScopes,
   verifyPassportAccessTokenClaims,
@@ -135,7 +137,7 @@ test('operator configuration defaults keep 2FA enforcement enabled', () => {
   assert.equal(defaults.security.playerTwoFactorRequired, true);
   assert.equal(defaults.security.operatorTwoFactorRequired, true);
   assert.equal(defaults.security.clientManagementRequiresOperator2fa, true);
-  assert.equal(defaults.identity.provider, 'local-dev');
+  assert.equal(defaults.identity.provider, config.identityProvider);
   assert.ok(defaults.qr.qrTokenTtlSeconds >= 60);
 });
 
@@ -153,4 +155,52 @@ test('operator deployment hints flag loopback QR configuration', () => {
   assert.equal(hints.appBaseUrlIsLoopback, true);
   assert.equal(hints.apiBaseUrlIsLoopback, true);
   assert.ok(hints.warnings[0].includes('QR codes'));
+});
+
+test('non-local startup security rejects local auth defaults', () => {
+  const findings = runtimeSecurityFindings({
+    ...config,
+    nodeEnv: 'development',
+    deploymentEnvironment: 'production',
+    supabaseDeploymentMode: 'local-cli',
+    identityProvider: 'local-dev',
+    appBaseUrl: 'http://127.0.0.1:5173',
+    apiBaseUrl: 'http://127.0.0.1:3000',
+    supabaseProjectUrl: 'http://127.0.0.1:54321',
+    identityIssuer: 'http://127.0.0.1:54321/auth/v1',
+    identityJwksUrl: 'http://127.0.0.1:54321/auth/v1/.well-known/jwks.json',
+    gameCallbackSecret: 'local-dev-game-callback-secret',
+    passportTokenSecret: 'local-dev-passport-token-secret',
+    exposeDevTwoFactorCodes: true,
+    operatorPin: '000000'
+  });
+
+  assert.ok(findings.includes('IDENTITY_PROVIDER must be supabase for non-local Nexus Player Passport auth.'));
+  assert.ok(findings.includes('SUPABASE_DEPLOYMENT_MODE cannot be local-cli outside local development.'));
+  assert.ok(findings.includes('NODE_ENV must be production when DEPLOYMENT_ENVIRONMENT=production.'));
+  assert.ok(findings.some((finding) => finding.includes('APP_BASE_URL cannot use localhost')));
+  assert.ok(findings.some((finding) => finding.includes('GAME_CALLBACK_SECRET')));
+});
+
+test('non-local startup security accepts hardened Supabase auth config', () => {
+  const findings = runtimeSecurityFindings({
+    ...config,
+    nodeEnv: 'production',
+    deploymentEnvironment: 'production',
+    supabaseDeploymentMode: 'self-hosted',
+    identityProvider: 'supabase',
+    appBaseUrl: 'https://arcade.example.test',
+    apiBaseUrl: 'https://api.arcade.example.test',
+    supabaseProjectUrl: 'https://identity.arcade.example.test',
+    identityIssuer: 'https://identity.arcade.example.test/auth/v1',
+    identityJwksUrl: 'https://identity.arcade.example.test/auth/v1/.well-known/jwks.json',
+    identityAudience: 'authenticated',
+    oauthIssuer: 'https://api.arcade.example.test',
+    gameCallbackSecret: 'prod-game-callback-secret-that-is-not-default',
+    passportTokenSecret: 'prod-passport-token-secret-that-is-not-default',
+    exposeDevTwoFactorCodes: false,
+    operatorPin: '835194'
+  });
+
+  assert.deepEqual(findings, []);
 });

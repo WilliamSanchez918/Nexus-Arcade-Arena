@@ -1,0 +1,78 @@
+services:
+  nexus-mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - nexus_mongo_data:/data/db
+
+  nexus-api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    depends_on:
+      nexus-mongo:
+        condition: service_started
+      kong:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGO_URI: mongodb://nexus-mongo:27017/nexus_arcade
+      DEPLOYMENT_ENVIRONMENT: production
+      SUPABASE_DEPLOYMENT_MODE: self-hosted
+      APP_BASE_URL: https://${NEXUS_APP_DOMAIN}
+      API_BASE_URL: https://${NEXUS_API_DOMAIN}
+      IDENTITY_PROVIDER: supabase
+      SUPABASE_PROJECT_URL: https://${NEXUS_IDENTITY_DOMAIN}
+      IDENTITY_ISSUER: https://${NEXUS_IDENTITY_DOMAIN}/auth/v1
+      IDENTITY_JWKS_URL: https://${NEXUS_IDENTITY_DOMAIN}/auth/v1/.well-known/jwks.json
+      IDENTITY_AUDIENCE: authenticated
+      OAUTH_ISSUER: https://${NEXUS_API_DOMAIN}
+      GAME_CALLBACK_SECRET: ${GAME_CALLBACK_SECRET}
+      PASSPORT_TOKEN_SECRET: ${PASSPORT_TOKEN_SECRET}
+      EXPOSE_DEV_2FA_CODES: "false"
+      OPERATOR_ID: ${OPERATOR_ID:-operator}
+      OPERATOR_PIN: ${OPERATOR_PIN}
+      TENANT_ID: ${TENANT_ID:-nexus-production}
+      TENANT_NAME: ${TENANT_NAME:-Nexus Arcade}
+
+  nexus-web:
+    build:
+      context: .
+      target: web
+      args:
+        VITE_API_BASE_URL: https://${NEXUS_API_DOMAIN}
+        VITE_IDENTITY_PROVIDER: supabase
+        VITE_SUPABASE_URL: https://${NEXUS_IDENTITY_DOMAIN}
+        VITE_SUPABASE_PUBLISHABLE_KEY: ${SUPABASE_PUBLISHABLE_KEY}
+        VITE_SUPABASE_ANON_KEY: ${ANON_KEY}
+    restart: unless-stopped
+
+  nexus-caddy:
+    image: caddy:2.8-alpine
+    restart: unless-stopped
+    depends_on:
+      nexus-api:
+        condition: service_started
+      nexus-web:
+        condition: service_started
+      kong:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      NEXUS_APP_DOMAIN: ${NEXUS_APP_DOMAIN}
+      NEXUS_API_DOMAIN: ${NEXUS_API_DOMAIN}
+      NEXUS_IDENTITY_DOMAIN: ${NEXUS_IDENTITY_DOMAIN}
+      NEXUS_LETSENCRYPT_EMAIL: ${NEXUS_LETSENCRYPT_EMAIL}
+    volumes:
+      - ./deploy/self-hosted-supabase/Caddyfile:/etc/caddy/Caddyfile:ro
+      - nexus_caddy_data:/data
+      - nexus_caddy_config:/config
+
+volumes:
+  nexus_mongo_data:
+  nexus_caddy_data:
+  nexus_caddy_config:

@@ -45,12 +45,12 @@ export async function verifyManagedIdentityRequest(req) {
 
   const runtimeConfig = identityConfigFromOperatorConfig(await getOperatorConfig());
   if (runtimeConfig.provider === 'local-dev') {
-    const error = new Error('Managed identity provider is not enabled');
+    const error = new Error('Nexus identity backend is not enabled');
     error.statusCode = 400;
     throw error;
   }
   if (!runtimeConfig.issuer || !runtimeConfig.jwksUrl) {
-    const error = new Error('Managed identity provider is missing issuer or JWKS URL');
+    const error = new Error('Nexus identity backend is missing issuer or JWKS URL');
     error.statusCode = 500;
     throw error;
   }
@@ -142,11 +142,16 @@ export async function findOrCreateManagedAuthProfile({ identity, displayName }) 
 }
 
 export async function playerProfileForManagedIdentityRequest(req, options = {}) {
+  return (await playerProfileWithManagedIdentityForRequest(req, options)).profile;
+}
+
+export async function playerProfileWithManagedIdentityForRequest(req, options = {}) {
   const identity = await verifyManagedIdentityRequest(req);
-  return findOrCreateManagedAuthProfile({
+  const profile = await findOrCreateManagedAuthProfile({
     identity,
     displayName: options.displayName
   });
+  return { identity, profile };
 }
 
 export function hasBearerToken(req) {

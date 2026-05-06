@@ -16,7 +16,7 @@ The Hub launches an exported executable with:
 --nexus-session-payload <jsonPath> --nexus-result-callback <localUrl>
 ```
 
-The Godot runtime reads the launch payload, uses the `players[]` Player Passport data for names and avatar colors, and posts a signed `GameResultPayload` back to the callback URL using `NEXUS_GAME_CALLBACK_SECRET`.
+The Godot runtime reads the Nexus launch payload, uses the `players[]` Player Passport data for names and avatar colors, and posts a signed `GameResultPayload` back to the Nexus Hub callback URL using `NEXUS_GAME_CALLBACK_SECRET`. It does not call Supabase or any database directly.
 
 For normal development, the Hub can launch this source project directly if Godot is installed and available as `godot`.
 

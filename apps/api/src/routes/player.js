@@ -18,7 +18,8 @@ import {
 } from '../services/twoFactorService.js';
 import {
   hasBearerToken,
-  playerProfileForManagedIdentityRequest
+  playerProfileForManagedIdentityRequest,
+  playerProfileWithManagedIdentityForRequest
 } from '../services/managedIdentityService.js';
 
 export const playerRouter = express.Router();
@@ -89,17 +90,21 @@ playerRouter.post('/claim-cabinet-session', async (req, res, next) => {
 
 playerRouter.post('/auth/session', async (req, res, next) => {
   try {
-    const profile = await playerProfileForManagedIdentityRequest(req, {
+    const { identity, profile } = await playerProfileWithManagedIdentityForRequest(req, {
       displayName: req.body.displayName
     });
     publishIntegrationEvent(req.app.locals.io, {
       type: 'player.updated',
       playerId: String(profile._id),
-      payload: { displayName: profile.displayName, managedIdentityVerified: true }
+      payload: {
+        displayName: profile.displayName,
+        managedIdentityVerified: true,
+        authProvider: identity.authProvider
+      }
     });
     res.json({
       playerToken: String(profile._id),
-      authProvider: 'managed',
+      authProvider: identity.authProvider,
       ...redactPlayerProfile(profile)
     });
   } catch (error) {

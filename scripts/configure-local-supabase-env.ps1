@@ -26,9 +26,11 @@ foreach ($line in $statusOutput) {
 }
 
 $apiUrl = $status["API_URL"]
+$publishableKey = $status["PUBLISHABLE_KEY"]
 $anonKey = $status["ANON_KEY"]
-if (-not $apiUrl -or -not $anonKey) {
-  throw "Supabase status did not include API_URL and ANON_KEY."
+$clientKey = if ($publishableKey) { $publishableKey } else { $anonKey }
+if (-not $apiUrl -or -not $clientKey) {
+  throw "Supabase status did not include API_URL and a browser-safe client key."
 }
 
 $updates = [ordered]@{
@@ -39,7 +41,8 @@ $updates = [ordered]@{
   "IDENTITY_AUDIENCE" = "authenticated"
   "VITE_IDENTITY_PROVIDER" = "supabase"
   "VITE_SUPABASE_URL" = $apiUrl
-  "VITE_SUPABASE_ANON_KEY" = $anonKey
+  "VITE_SUPABASE_PUBLISHABLE_KEY" = $clientKey
+  "VITE_SUPABASE_ANON_KEY" = if ($anonKey) { $anonKey } else { $clientKey }
 }
 
 $content = Get-Content -LiteralPath $envPath -Raw

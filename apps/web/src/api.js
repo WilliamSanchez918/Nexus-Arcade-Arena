@@ -1,4 +1,8 @@
 import { createClient } from '@supabase/supabase-js';
+import {
+  hasSupabaseClientConfig,
+  supabaseClientKeyFromEnv
+} from './supabaseConfig.js';
 
 function runtimeApiBaseUrl() {
   const fromQuery = new URLSearchParams(window.location.search).get('apiBaseUrl');
@@ -10,6 +14,10 @@ const PLAYER_TOKEN_KEY = 'nexus.playerToken';
 const MANAGED_AUTH_TOKEN_KEY = 'nexus.managedAuthToken';
 const OPERATOR_TOKEN_KEY = 'nexus.operatorToken';
 let supabaseClient;
+
+function runtimeEnv() {
+  return import.meta.env || {};
+}
 
 export function getPlayerToken() {
   return window.localStorage.getItem(PLAYER_TOKEN_KEY);
@@ -37,9 +45,7 @@ export function setManagedAuthToken(token) {
 }
 
 export function isManagedAuthEnabled() {
-  return import.meta.env.VITE_IDENTITY_PROVIDER === 'supabase'
-    && Boolean(import.meta.env.VITE_SUPABASE_URL)
-    && Boolean(import.meta.env.VITE_SUPABASE_ANON_KEY);
+  return hasSupabaseClientConfig(runtimeEnv());
 }
 
 export function getSupabaseClient() {
@@ -47,9 +53,10 @@ export function getSupabaseClient() {
     return null;
   }
   if (!supabaseClient) {
+    const env = runtimeEnv();
     supabaseClient = createClient(
-      import.meta.env.VITE_SUPABASE_URL,
-      import.meta.env.VITE_SUPABASE_ANON_KEY
+      env.VITE_SUPABASE_URL,
+      supabaseClientKeyFromEnv(env)
     );
   }
   return supabaseClient;

@@ -3,6 +3,7 @@ import { Server as SocketServer } from 'socket.io';
 import { createApp } from './app.js';
 import { config } from './config.js';
 import { connectDb } from './db.js';
+import { assertRuntimeSecurity } from './securityStartup.js';
 
 const httpServer = http.createServer();
 const io = new SocketServer(httpServer, {
@@ -20,6 +21,7 @@ io.on('connection', (socket) => {
 
 httpServer.on('request', app);
 
+assertRuntimeSecurity();
 await connectDb();
 
 httpServer.listen(config.port, () => {

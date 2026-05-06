@@ -53,6 +53,7 @@ export const config = {
   tenantId: process.env.TENANT_ID || 'local-tenant',
   tenantName: process.env.TENANT_NAME || 'Local Arcade',
   deploymentEnvironment,
+  supabaseDeploymentMode: process.env.SUPABASE_DEPLOYMENT_MODE || (deploymentEnvironment === 'local' ? 'local-cli' : 'hosted'),
   appBaseUrl: process.env.APP_BASE_URL || defaultAppBaseUrl,
   apiBaseUrl: process.env.API_BASE_URL || defaultApiBaseUrl,
   identityProvider: process.env.IDENTITY_PROVIDER || 'local-dev',

@@ -49,6 +49,15 @@ npm run dev:supabase
 
 `supabase:setup` starts the local Supabase Docker stack and writes the local Auth URL/JWKS/anon key into `.env`. The Nexus API still stores Player Passport profile, avatar, XP, stats, and game data in MongoDB during this phase; Supabase is used for player proof of identity.
 
+For Nexus-owned production infrastructure, bootstrap the self-hosted Supabase deployment and start the production Compose project:
+
+```powershell
+npm run selfhost:supabase:bootstrap -- -Domain arcade.costleyentertainment.com -ApiDomain api.arcade.costleyentertainment.com -IdentityDomain identity.arcade.costleyentertainment.com -Email admin@costleyentertainment.com
+npm run selfhost:up
+```
+
+This uses the official Supabase Docker bundle under `deploy/self-hosted-supabase/upstream`, generates a Git-ignored production env file, and runs self-hosted Supabase, Nexus API, Nexus web, MongoDB, and Caddy together. See `docs/production-auth-readiness.md` and `deploy/self-hosted-supabase/README.md`.
+
 Local V1 logins require a 6-digit 2FA challenge. In development, `EXPOSE_DEV_2FA_CODES=true` returns the code in the API response/UI so the flow can be tested without email or SMS infrastructure. The default local operator credentials are `OPERATOR_ID=operator` and `OPERATOR_PIN=000000`; change them in `.env` for any shared environment.
 
 The operator console is available at `/operator/config` after operator login. It includes tenant identity, deployment environment, site/cabinet defaults, app/API base URLs, QR URL preview, cloud identity provider settings, 2FA challenge policy, QR session TTL, and OAuth issuer settings. These values are persisted in MongoDB and the API reads the relevant settings at runtime. QR codes use the configured App base URL and only carry the cabinet pairing session ID; for phones, set the App base URL to a LAN or public HTTPS URL rather than `localhost`.
@@ -69,7 +78,7 @@ The curated Nexus Relay asset set now includes Kenney station modules, Quaterniu
 
 ## Player Passport integration boundary
 
-Player Passport is cloud-first. Player identity belongs in Supabase Auth or another managed cloud identity provider, while Nexus stores profile, avatar, XP, stats, achievements, game sessions, and leaderboard data in the cloud application database. MongoDB may store application data, but it is not the identity provider.
+Player Passport is cloud-first and Nexus-owned. Player login is backed by Supabase Auth, either hosted or self-hosted under the Nexus domain, while Nexus stores profile, avatar, XP, stats, achievements, game sessions, and leaderboard data in the cloud application database. MongoDB may store application data, but it is not the identity provider.
 
 Cabinets do not store passwords or long-lived player auth tokens. When online, a cabinet displays a short-lived QR pairing session such as `/play/claim?session=<sessionId>`. The phone authenticates with the cloud identity provider, claims P1 or P2 through the Nexus API, and the cabinet receives only display name, avatar manifest, level, slot, and cabinet-scoped session data.
 

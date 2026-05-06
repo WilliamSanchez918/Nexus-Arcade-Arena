@@ -1,0 +1,17 @@
+{
+  email {$NEXUS_LETSENCRYPT_EMAIL}
+}
+{$NEXUS_APP_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy nexus-web:80
+}
+
+{$NEXUS_API_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy nexus-api:3000
+}
+
+{$NEXUS_IDENTITY_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy kong:8000
+}

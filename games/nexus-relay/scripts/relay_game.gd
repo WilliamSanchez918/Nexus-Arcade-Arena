@@ -1,13 +1,14 @@
 extends Node3D
 
 const GAME_ID := "nexus_relay"
-const GAME_TITLE := "Nexus Overdrive"
+const GAME_TITLE := "Nexus Blackout"
 const JOIN_COUNTDOWN_SECONDS := 12.0
 const ATTRACT_DEMO_SECONDS := 8.0
-const BRIEFING_SECONDS := 2.8
+const BRIEFING_SECONDS := 10.5
+const CINEMATIC_SKIP_GRACE_SECONDS := 2.0
 const INTERMISSION_SECONDS := 2.4
 const THREAT_GRACE_SECONDS := 10.0
-const MAX_TIME_SECONDS := 260.0
+const MAX_TIME_SECONDS := 320.0
 const PLAYER_SPEED := 7.4
 const PLAYER_ACCELERATION := 26.0
 const PLAYER_DECELERATION := 34.0
@@ -20,40 +21,86 @@ const PLAYER_WEAPON_DAMAGE := 34.0
 const PLAYER_WEAPON_RADIUS := 0.11
 const PHYSICS_PROP_RADIUS := 0.48
 const PHYSICS_PROP_FRICTION := 5.8
-const SENTRY_ALERT_RADIUS := 4.9
+const SENTRY_ALERT_RADIUS := 4.45
 const SENTRY_PATROL_RADIUS := 1.65
 const SENTRY_HEALTH := 100.0
 const SENTRY_ATTACK_RANGE := 0.96
-const SENTRY_ATTACK_COOLDOWN := 1.15
+const SENTRY_ATTACK_COOLDOWN := 1.35
 const SENTRY_STUN_DURATION := 0.42
 const SPAWN_SAFE_RADIUS := 7.2
-const ARENA_RECT := Rect2(Vector2(-12.0, -7.0), Vector2(24.0, 14.0))
-const MISSION_NAMES := ["Generate Sparks", "Frame The Route", "Share The Prototype"]
+const ARENA_RECT := Rect2(Vector2(-20.0, -12.0), Vector2(40.0, 24.0))
+const MISSION_NAMES := ["Power Cell Route", "Override Chain", "Extraction Hold"]
 const MISSION_STORY := [
 	{
-		"title": "Generate Sparks",
-		"solo": "Collect idea sparks in the open lanes before blockers enter the sprint.",
-		"coop": "Split the lanes, call out sparks, and keep the center clear.",
-		"hint": "Move first. Threats wait during safe launch."
+		"title": "Power Cell Route",
+		"solo": "Follow the amber cell route one step at a time before the station drones fully wake up.",
+		"coop": "Split lookout and pickup roles, but keep the active amber cell as the team's next step.",
+		"hint": "Only the active cell counts. The next route marker wakes after each pickup."
 	},
 	{
-		"title": "Frame The Route",
-		"solo": "Tag the Always and Never gates to turn the raw sparks into a route.",
-		"coop": "Either player can tag a gate; cover the route while your partner crosses.",
-		"hint": "Clear success: both gates lit."
+		"title": "Override Chain",
+		"solo": "Reach Alpha, then Omega, and use the maze walls to break seeker sight lines.",
+		"coop": "One player can cover seekers while the other takes the active terminal in sequence.",
+		"hint": "The terminals must be armed in order."
 	},
 	{
-		"title": "Share The Prototype",
-		"solo": "Hold the demo pad long enough to ship the prototype.",
-		"coop": "All active players hold the demo pad together for a stronger finish.",
-		"hint": "Hold the bright pad. Beat your score next run."
+		"title": "Extraction Hold",
+		"solo": "Hold the rescue beacon long enough for the evacuation lift to dock.",
+		"coop": "All active players hold the beacon together while seekers converge on the noise.",
+		"hint": "Hold the lit beacon. Survive until extraction confirms."
 	}
 ]
+const OPENING_CINEMATIC_BEATS := [
+	{
+		"at": 0.0,
+		"title": "NEXUS BLACKOUT",
+		"body": "Deck 7 is sealed. Survivors are trapped behind a blast door, and station security is hunting anything that moves.",
+		"focus": Vector3(0.0, 1.35, 5.2),
+		"camera": Vector3(-10.5, 4.6, 10.2),
+		"color": "#73FBD3",
+		"sound": "glitch",
+		"pattern": "radial"
+	},
+	{
+		"at": 2.7,
+		"title": "1. RESTORE POWER",
+		"body": "Recover emergency cells from the service lanes. Power brings the evacuation systems back online.",
+		"focus": Vector3(-9.4, 1.05, -1.2),
+		"camera": Vector3(-16.4, 4.4, 6.6),
+		"color": "#FFD166",
+		"sound": "select",
+		"pattern": "horizontal"
+	},
+	{
+		"at": 5.4,
+		"title": "2. OPEN THE DOOR",
+		"body": "Trigger Alpha and Omega overrides to break the lockdown. In duo mode, split roles and cover the crossing.",
+		"focus": Vector3(11.8, 1.15, -4.2),
+		"camera": Vector3(17.2, 4.6, 4.2),
+		"color": "#8FE8FF",
+		"sound": "switch",
+		"pattern": "diagonal"
+	},
+	{
+		"at": 8.0,
+		"title": "3. CALL THE LIFT",
+		"body": "Hold the rescue beacon until the lift locks. Clear drones first, then commit to the signal.",
+		"focus": Vector3(0.0, 1.2, -9.0),
+		"camera": Vector3(7.6, 4.8, 2.2),
+		"color": "#FF5A6A",
+		"sound": "confirm",
+		"pattern": "circle"
+	}
+]
+const STAGE_CINEMATIC_SECONDS := 5.2
+const ENDING_CINEMATIC_SECONDS := 7.6
 const ASSET_ROOT := "res://assets/kenney"
 const PBR_ROOT := "res://assets/ambientcg"
 const MODULE_ROOT := ASSET_ROOT + "/modular-space-kit/models"
 const KENNEY_CHARACTER_ROOT := ASSET_ROOT + "/animated-characters-protagonists"
 const QUATERNIUS_ROOT := "res://assets/quaternius/ultimate-space-kit/models"
+const MEGAKIT_ROOT := "res://assets/quaternius/modular-sci-fi-megakit"
+const KAYKIT_ROOT := "res://assets/kaykit/space-base-bits/models"
 const KENNEY_CHARACTER_MODEL := KENNEY_CHARACTER_ROOT + "/Model/characterMedium.fbx"
 const KENNEY_CHARACTER_ANIMATIONS := {
 	"idle": KENNEY_CHARACTER_ROOT + "/Animations/idle.fbx",
@@ -99,6 +146,86 @@ const QUATERNIUS_MODEL_PATHS := {
 	"roof_radar": QUATERNIUS_ROOT + "/Roof Radar.glb",
 	"spaceship": QUATERNIUS_ROOT + "/Spaceship.glb"
 }
+const MEGAKIT_MODEL_PATHS := {
+	"alien_cyclop": MEGAKIT_ROOT + "/aliens/Alien_Cyclop.gltf",
+	"alien_oculichrysalis": MEGAKIT_ROOT + "/aliens/Alien_Oculichrysalis.gltf",
+	"alien_scolitex": MEGAKIT_ROOT + "/aliens/Alien_Scolitex.gltf",
+	"column_astra": MEGAKIT_ROOT + "/columns/Column_Astra.gltf",
+	"column_large": MEGAKIT_ROOT + "/columns/Column_Large_Straight.gltf",
+	"column_pipes": MEGAKIT_ROOT + "/columns/Column_Pipes.gltf",
+	"column_round": MEGAKIT_ROOT + "/columns/Column_Round.gltf",
+	"door_frame": MEGAKIT_ROOT + "/platforms/Door_Frame_Square.gltf",
+	"door_blocked": MEGAKIT_ROOT + "/platforms/Door_Frame_Square_Blocked.gltf",
+	"door_dark": MEGAKIT_ROOT + "/platforms/Door_DarkMetal.gltf",
+	"door_metal": MEGAKIT_ROOT + "/platforms/Door_Metal.gltf",
+	"platform_plates": MEGAKIT_ROOT + "/platforms/Platform_3Plates.gltf",
+	"platform_metal": MEGAKIT_ROOT + "/platforms/Platform_Metal.gltf",
+	"platform_rails": MEGAKIT_ROOT + "/platforms/Platform_Rails_4Wide.gltf",
+	"platform_ramp": MEGAKIT_ROOT + "/platforms/Platform_Ramp_4Wide.gltf",
+	"platform_squares": MEGAKIT_ROOT + "/platforms/Platform_Squares.gltf",
+	"prop_access_point": MEGAKIT_ROOT + "/props/Prop_AccessPoint.gltf",
+	"prop_barrel": MEGAKIT_ROOT + "/props/Prop_Barrel_Large.gltf",
+	"prop_computer": MEGAKIT_ROOT + "/props/Prop_Computer.gltf",
+	"prop_crate3": MEGAKIT_ROOT + "/props/Prop_Crate3.gltf",
+	"prop_crate4": MEGAKIT_ROOT + "/props/Prop_Crate4.gltf",
+	"prop_light_floor": MEGAKIT_ROOT + "/props/Prop_Light_Floor.gltf",
+	"prop_light_wide": MEGAKIT_ROOT + "/props/Prop_Light_Wide.gltf",
+	"prop_rail": MEGAKIT_ROOT + "/props/Prop_Rail_4.gltf",
+	"prop_vent_wide": MEGAKIT_ROOT + "/props/Prop_Vent_Wide.gltf",
+	"short_wall": MEGAKIT_ROOT + "/walls/ShortWall_MetalPlates_Straight.gltf",
+	"top_window": MEGAKIT_ROOT + "/walls/TopWindow_Straight.gltf",
+	"wall_astra": MEGAKIT_ROOT + "/walls/WallAstra_Straight.gltf",
+	"wall_astra_divided": MEGAKIT_ROOT + "/walls/WallAstra_Straight_Divided.gltf",
+	"wall_astra_window": MEGAKIT_ROOT + "/walls/WallAstra_Straight_Window.gltf",
+	"wall_window": MEGAKIT_ROOT + "/walls/WallWindow_Straight.gltf"
+}
+const KAYKIT_MODEL_PATHS := {
+	"base_a": KAYKIT_ROOT + "/basemodule_A.gltf",
+	"base_b": KAYKIT_ROOT + "/basemodule_B.gltf",
+	"base_c": KAYKIT_ROOT + "/basemodule_C.gltf",
+	"cargo_depot": KAYKIT_ROOT + "/cargodepot_A.gltf",
+	"container_a": KAYKIT_ROOT + "/containers_A.gltf",
+	"container_d": KAYKIT_ROOT + "/containers_D.gltf",
+	"landing_pad": KAYKIT_ROOT + "/landingpad_large.gltf",
+	"lights": KAYKIT_ROOT + "/lights.gltf",
+	"solar_panel": KAYKIT_ROOT + "/solarpanel.gltf",
+	"space_truck": KAYKIT_ROOT + "/spacetruck.gltf",
+	"space_truck_large": KAYKIT_ROOT + "/spacetruck_large.gltf",
+	"structure_tall": KAYKIT_ROOT + "/structure_tall.gltf",
+	"tunnel_diagonal": KAYKIT_ROOT + "/tunnel_diagonal_long_A.gltf",
+	"tunnel_straight": KAYKIT_ROOT + "/tunnel_straight_A.gltf"
+}
+const POWER_CELL_ROUTE := [
+	Vector3(-13.8, 0.0, 8.0),
+	Vector3(-15.6, 0.0, 0.8),
+	Vector3(-9.4, 0.0, -7.7),
+	Vector3(-1.9, 0.0, -8.6),
+	Vector3(5.8, 0.0, -7.9),
+	Vector3(14.4, 0.0, -1.8),
+	Vector3(10.8, 0.0, 6.4),
+	Vector3(1.2, 0.0, 8.6)
+]
+const SUPPLY_CACHE_POINTS := [
+	Vector3(-16.8, 0.0, 6.8),
+	Vector3(-3.8, 0.0, -6.4),
+	Vector3(8.6, 0.0, -9.0),
+	Vector3(16.0, 0.0, 5.9),
+	Vector3(0.0, 0.0, 2.8)
+]
+const SENTRY_HOME_POINTS := [
+	Vector3(-13.6, 0.0, -2.6),
+	Vector3(13.6, 0.0, -3.0),
+	Vector3(-5.2, 0.0, 4.2),
+	Vector3(5.4, 0.0, 3.8)
+]
+const PHYSICS_PROP_POINTS := [
+	Vector3(-11.0, 0.0, 5.6),
+	Vector3(-6.0, 0.0, -4.4),
+	Vector3(-0.5, 0.0, 5.0),
+	Vector3(5.6, 0.0, -5.7),
+	Vector3(10.7, 0.0, 3.5),
+	Vector3(14.6, 0.0, -7.0)
+]
 const PBR_TEXTURE_SETS := {
 	"floor_panel_2k": {
 		"color": PBR_ROOT + "/MetalPlates006_2K/MetalPlates006_2K-JPG_Color.jpg",
@@ -167,6 +294,8 @@ var team_score := 0
 var finished := false
 var submitted_result := false
 var final_message := ""
+var power_cell_index := 0
+var relay_sequence_index := 0
 
 var relay_pads: Array[Dictionary] = []
 var relay_progress := [0.0, 0.0]
@@ -211,6 +340,11 @@ var p1_label: Label
 var p2_label: Label
 var controls_label: Label
 var result_label: Label
+var join_overlay_panel: PanelContainer
+var join_overlay_countdown_label: Label
+var join_overlay_title_label: Label
+var join_overlay_slots_label: Label
+var join_overlay_mode_label: Label
 var storyboard_panel: PanelContainer
 var storyboard_title_label: Label
 var storyboard_route_label: Label
@@ -223,6 +357,16 @@ var phase_scene_panel: PanelContainer
 var phase_scene_title_label: Label
 var phase_scene_body_label: Label
 var phase_scene_timer := 0.0
+var cinematic_time := 0.0
+var cinematic_beat_index := -1
+var briefing_objectives_ready := false
+var ending_cinematic_message := ""
+var cinematic_panel: PanelContainer
+var cinematic_title_label: Label
+var cinematic_body_label: Label
+var cinematic_prompt_label: Label
+var cinematic_letterbox_top: ColorRect
+var cinematic_letterbox_bottom: ColorRect
 var objective_banner_panel: PanelContainer
 var objective_banner_title_label: Label
 var objective_banner_body_label: Label
@@ -262,11 +406,19 @@ func _process(delta: float) -> void:
 			_update_play(delta)
 		"intermission":
 			_update_intermission_scene(delta)
+		"ending":
+			_update_ending_cinematic(delta)
 		"finished":
 			pass
 
 	if phase == "attract":
 		_update_attract_camera(delta)
+	elif phase == "briefing":
+		_update_opening_cinematic_camera(delta)
+	elif phase == "intermission":
+		_update_stage_cinematic_camera(delta)
+	elif phase == "ending":
+		_update_ending_cinematic_camera(delta)
 	else:
 		_update_camera(delta)
 	_animate_scene(delta)
@@ -510,7 +662,7 @@ func _create_world() -> void:
 	camera.projection = Camera3D.PROJECTION_PERSPECTIVE
 	camera.fov = 70.0
 	camera.near = 0.05
-	camera.far = 90.0
+	camera.far = 140.0
 	camera.position = Vector3(0, 2.7, 8.1)
 	camera.current = true
 	add_child(camera)
@@ -603,42 +755,51 @@ func _add_omni_light(name: String, position: Vector3, color: Color, energy: floa
 
 func _create_station_floor() -> void:
 	var tile_size := 2.0
-	for x in range(-6, 6):
-		for z in range(-4, 4):
+	var columns := int(round(ARENA_RECT.size.x / tile_size))
+	var rows := int(round(ARENA_RECT.size.y / tile_size))
+	for x in range(columns):
+		for z in range(rows):
 			var mat = materials["floor_alt"] if (x + z + generation_seed) % 3 == 0 else materials["floor"]
-			var tile := _make_box(Vector3(tile_size - 0.08, 0.16, tile_size - 0.08), mat, Vector3(x * tile_size + 1.0, -0.08, z * tile_size + 1.0), prop_root)
+			var tile_center := Vector3(
+				ARENA_RECT.position.x + (float(x) + 0.5) * tile_size,
+				-0.08,
+				ARENA_RECT.position.y + (float(z) + 0.5) * tile_size
+			)
+			var tile := _make_box(Vector3(tile_size - 0.08, 0.16, tile_size - 0.08), mat, tile_center, prop_root)
 			tile.name = "PBRFloorPanel"
-			_make_box(Vector3(tile_size - 0.28, 0.018, 0.028), materials["floor_trim"], Vector3(x * tile_size + 1.0, 0.018, z * tile_size + 1.0 - tile_size * 0.45), prop_root)
-			_make_box(Vector3(0.028, 0.018, tile_size - 0.28), materials["floor_trim"], Vector3(x * tile_size + 1.0 - tile_size * 0.45, 0.019, z * tile_size + 1.0), prop_root)
+			_make_box(Vector3(tile_size - 0.28, 0.018, 0.028), materials["floor_trim"], tile_center + Vector3(0.0, 0.098, -tile_size * 0.45), prop_root)
+			_make_box(Vector3(0.028, 0.018, tile_size - 0.28), materials["floor_trim"], tile_center + Vector3(-tile_size * 0.45, 0.099, 0.0), prop_root)
 			if (x + z) % 4 == 0:
-				_make_cylinder(0.045, 0.018, materials["floor_bolt"], Vector3(x * tile_size + 0.28, 0.035, z * tile_size + 0.28), prop_root)
-				_make_cylinder(0.045, 0.018, materials["floor_bolt"], Vector3(x * tile_size + 1.72, 0.035, z * tile_size + 1.72), prop_root)
+				_make_cylinder(0.045, 0.018, materials["floor_bolt"], tile_center + Vector3(-0.72, 0.115, -0.72), prop_root)
+				_make_cylinder(0.045, 0.018, materials["floor_bolt"], tile_center + Vector3(0.72, 0.115, 0.72), prop_root)
 
-	_make_box(Vector3(24.6, 0.42, 0.38), materials["floor_trim"], Vector3(0, 0.08, ARENA_RECT.position.y), prop_root)
-	_make_box(Vector3(24.6, 0.42, 0.38), materials["floor_trim"], Vector3(0, 0.08, ARENA_RECT.end.y), prop_root)
-	_make_box(Vector3(0.38, 0.42, 13.4), materials["floor_trim"], Vector3(ARENA_RECT.position.x, 0.08, 0), prop_root)
-	_make_box(Vector3(0.38, 0.42, 13.4), materials["floor_trim"], Vector3(ARENA_RECT.end.x, 0.08, 0), prop_root)
-	_make_box(Vector3(24.2, 1.45, 0.22), materials["panel"], Vector3(0, 0.7, ARENA_RECT.position.y - 0.42), prop_root)
-	_make_box(Vector3(24.2, 1.45, 0.22), materials["panel"], Vector3(0, 0.7, ARENA_RECT.end.y + 0.42), prop_root)
-	_make_box(Vector3(0.22, 1.45, 13.1), materials["panel"], Vector3(ARENA_RECT.position.x - 0.42, 0.7, 0), prop_root)
-	_make_box(Vector3(0.22, 1.45, 13.1), materials["panel"], Vector3(ARENA_RECT.end.x + 0.42, 0.7, 0), prop_root)
-	_register_box_obstacle(Vector3(0, 0.7, ARENA_RECT.position.y - 0.42), Vector3(24.2, 1.45, 0.42), "NorthWall")
-	_register_box_obstacle(Vector3(0, 0.7, ARENA_RECT.end.y + 0.42), Vector3(24.2, 1.45, 0.42), "SouthWall")
-	_register_box_obstacle(Vector3(ARENA_RECT.position.x - 0.42, 0.7, 0), Vector3(0.42, 1.45, 13.1), "WestWall")
-	_register_box_obstacle(Vector3(ARENA_RECT.end.x + 0.42, 0.7, 0), Vector3(0.42, 1.45, 13.1), "EastWall")
-	for x in range(-5, 6, 2):
-		_make_box(Vector3(0.18, 1.9, 0.18), materials["wall"], Vector3(x * 2.0, 1.0, ARENA_RECT.position.y - 0.62), prop_root)
-		_make_box(Vector3(0.18, 1.9, 0.18), materials["wall"], Vector3(x * 2.0, 1.0, ARENA_RECT.end.y + 0.62), prop_root)
+	var center_x := ARENA_RECT.position.x + ARENA_RECT.size.x * 0.5
+	var center_z := ARENA_RECT.position.y + ARENA_RECT.size.y * 0.5
+	_make_box(Vector3(ARENA_RECT.size.x + 0.6, 0.42, 0.38), materials["floor_trim"], Vector3(center_x, 0.08, ARENA_RECT.position.y), prop_root)
+	_make_box(Vector3(ARENA_RECT.size.x + 0.6, 0.42, 0.38), materials["floor_trim"], Vector3(center_x, 0.08, ARENA_RECT.end.y), prop_root)
+	_make_box(Vector3(0.38, 0.42, ARENA_RECT.size.y - 0.6), materials["floor_trim"], Vector3(ARENA_RECT.position.x, 0.08, center_z), prop_root)
+	_make_box(Vector3(0.38, 0.42, ARENA_RECT.size.y - 0.6), materials["floor_trim"], Vector3(ARENA_RECT.end.x, 0.08, center_z), prop_root)
+	_make_box(Vector3(ARENA_RECT.size.x + 0.2, 1.45, 0.22), materials["panel"], Vector3(center_x, 0.7, ARENA_RECT.position.y - 0.42), prop_root)
+	_make_box(Vector3(ARENA_RECT.size.x + 0.2, 1.45, 0.22), materials["panel"], Vector3(center_x, 0.7, ARENA_RECT.end.y + 0.42), prop_root)
+	_make_box(Vector3(0.22, 1.45, ARENA_RECT.size.y - 0.9), materials["panel"], Vector3(ARENA_RECT.position.x - 0.42, 0.7, center_z), prop_root)
+	_make_box(Vector3(0.22, 1.45, ARENA_RECT.size.y - 0.9), materials["panel"], Vector3(ARENA_RECT.end.x + 0.42, 0.7, center_z), prop_root)
+	_register_box_obstacle(Vector3(center_x, 0.7, ARENA_RECT.position.y - 0.42), Vector3(ARENA_RECT.size.x + 0.2, 1.45, 0.42), "NorthWall")
+	_register_box_obstacle(Vector3(center_x, 0.7, ARENA_RECT.end.y + 0.42), Vector3(ARENA_RECT.size.x + 0.2, 1.45, 0.42), "SouthWall")
+	_register_box_obstacle(Vector3(ARENA_RECT.position.x - 0.42, 0.7, center_z), Vector3(0.42, 1.45, ARENA_RECT.size.y - 0.9), "WestWall")
+	_register_box_obstacle(Vector3(ARENA_RECT.end.x + 0.42, 0.7, center_z), Vector3(0.42, 1.45, ARENA_RECT.size.y - 0.9), "EastWall")
+	for x in range(int(ARENA_RECT.position.x) + 2, int(ARENA_RECT.end.x) - 1, 4):
+		_make_box(Vector3(0.18, 1.9, 0.18), materials["wall"], Vector3(float(x), 1.0, ARENA_RECT.position.y - 0.62), prop_root)
+		_make_box(Vector3(0.18, 1.9, 0.18), materials["wall"], Vector3(float(x), 1.0, ARENA_RECT.end.y + 0.62), prop_root)
 
 func _create_station_modules() -> void:
 	var layout := [
-		{ "key": "room_small", "pos": Vector3(-14.2, 0.0, -6.7), "rot": 0.0, "scale": 0.52, "fallback": Vector3(3.0, 1.1, 2.4) },
-		{ "key": "room_wide", "pos": Vector3(14.3, 0.0, -6.2), "rot": PI, "scale": 0.5, "fallback": Vector3(3.6, 1.1, 2.4) },
-		{ "key": "corridor", "pos": Vector3(-14.0, 0.0, 5.4), "rot": PI / 2.0, "scale": 0.5, "fallback": Vector3(4.0, 0.85, 1.2) },
-		{ "key": "corridor_wide", "pos": Vector3(14.2, 0.0, 5.5), "rot": PI / 2.0, "scale": 0.46, "fallback": Vector3(4.8, 0.85, 1.5) },
-		{ "key": "gate", "pos": Vector3(0.0, 0.0, -8.6), "rot": 0.0, "scale": 0.48, "fallback": Vector3(2.0, 1.5, 0.4) },
-		{ "key": "cables", "pos": Vector3(-4.8, 0.0, 8.2), "rot": PI / 2.0, "scale": 0.58, "fallback": Vector3(2.6, 0.22, 0.4) },
-		{ "key": "stairs", "pos": Vector3(5.0, 0.0, 8.2), "rot": 0.0, "scale": 0.46, "fallback": Vector3(1.6, 0.8, 1.2) }
+		{ "key": "room_small", "pos": Vector3(-22.2, 0.0, -10.5), "rot": 0.0, "scale": 0.62, "fallback": Vector3(3.0, 1.1, 2.4) },
+		{ "key": "room_wide", "pos": Vector3(22.3, 0.0, -9.8), "rot": PI, "scale": 0.6, "fallback": Vector3(3.6, 1.1, 2.4) },
+		{ "key": "corridor", "pos": Vector3(-22.0, 0.0, 8.9), "rot": PI / 2.0, "scale": 0.58, "fallback": Vector3(4.0, 0.85, 1.2) },
+		{ "key": "corridor_wide", "pos": Vector3(22.2, 0.0, 8.8), "rot": PI / 2.0, "scale": 0.54, "fallback": Vector3(4.8, 0.85, 1.5) },
+		{ "key": "gate", "pos": Vector3(0.0, 0.0, -13.6), "rot": 0.0, "scale": 0.6, "fallback": Vector3(2.0, 1.5, 0.4) },
+		{ "key": "cables", "pos": Vector3(-8.8, 0.0, 13.0), "rot": PI / 2.0, "scale": 0.7, "fallback": Vector3(2.6, 0.22, 0.4) },
+		{ "key": "stairs", "pos": Vector3(8.8, 0.0, 13.0), "rot": 0.0, "scale": 0.54, "fallback": Vector3(1.6, 0.8, 1.2) }
 	]
 
 	for item in layout:
@@ -651,12 +812,12 @@ func _create_station_modules() -> void:
 			module_model.name = "Perimeter%s" % String(item["key"]).capitalize()
 
 	var hero_props := [
-		{ "key": "base_large", "pos": Vector3(-13.2, 0.0, -0.9), "rot": PI / 2.0, "scale": 0.24, "fallback": Vector3(2.6, 1.4, 2.6) },
-		{ "key": "building_l", "pos": Vector3(13.0, 0.0, -0.8), "rot": -PI / 2.0, "scale": 0.24, "fallback": Vector3(2.0, 1.5, 3.2) },
-		{ "key": "geodesic_dome", "pos": Vector3(-10.2, 0.0, 8.2), "rot": 0.0, "scale": 0.22, "fallback": Vector3(1.6, 1.0, 1.6) },
-		{ "key": "solar_panel", "pos": Vector3(10.5, 0.0, 8.1), "rot": PI / 4.0, "scale": 0.3, "fallback": Vector3(1.6, 0.5, 0.7) },
-		{ "key": "roof_radar", "pos": Vector3(-8.7, 0.0, -8.5), "rot": -PI / 5.0, "scale": 0.22, "fallback": Vector3(1.1, 1.2, 1.1) },
-		{ "key": "metal_support", "pos": Vector3(8.7, 0.0, -8.4), "rot": 0.0, "scale": 0.34, "fallback": Vector3(0.7, 1.6, 0.7) }
+		{ "key": "base_large", "pos": Vector3(-17.0, 0.0, -2.0), "rot": PI / 2.0, "scale": 0.3, "fallback": Vector3(2.6, 1.4, 2.6) },
+		{ "key": "building_l", "pos": Vector3(17.0, 0.0, -1.8), "rot": -PI / 2.0, "scale": 0.3, "fallback": Vector3(2.0, 1.5, 3.2) },
+		{ "key": "geodesic_dome", "pos": Vector3(-15.2, 0.0, 12.6), "rot": 0.0, "scale": 0.28, "fallback": Vector3(1.6, 1.0, 1.6) },
+		{ "key": "solar_panel", "pos": Vector3(15.6, 0.0, 12.5), "rot": PI / 4.0, "scale": 0.36, "fallback": Vector3(1.6, 0.5, 0.7) },
+		{ "key": "roof_radar", "pos": Vector3(-14.6, 0.0, -13.2), "rot": -PI / 5.0, "scale": 0.28, "fallback": Vector3(1.1, 1.2, 1.1) },
+		{ "key": "metal_support", "pos": Vector3(14.6, 0.0, -13.1), "rot": 0.0, "scale": 0.4, "fallback": Vector3(0.7, 1.6, 0.7) }
 	]
 	for item in hero_props:
 		var prop_position: Vector3 = item["pos"]
@@ -664,14 +825,46 @@ func _create_station_modules() -> void:
 		var prop_fallback: Vector3 = item["fallback"]
 		_spawn_quaternius_model(item["key"], prop_position, prop_rotation, item["scale"], prop_fallback)
 
+	_create_imported_station_dressing()
 	_create_playfield_cover()
+
+func _create_imported_station_dressing() -> void:
+	var dressing := [
+		{ "key": "landing_pad", "source": "kaykit", "pos": Vector3(0.0, 0.0, -14.8), "rot": PI, "scale": Vector3.ONE * 1.28, "fallback": Vector3(4.4, 0.35, 3.2), "block": false },
+		{ "key": "base_a", "source": "kaykit", "pos": Vector3(-18.4, 0.0, 8.4), "rot": PI / 2.0, "scale": Vector3.ONE * 0.92, "fallback": Vector3(3.0, 1.2, 2.2), "block": true },
+		{ "key": "base_b", "source": "kaykit", "pos": Vector3(18.4, 0.0, 8.2), "rot": -PI / 2.0, "scale": Vector3.ONE * 0.92, "fallback": Vector3(3.0, 1.2, 2.2), "block": true },
+		{ "key": "space_truck_large", "source": "kaykit", "pos": Vector3(-16.6, 0.0, -8.8), "rot": 0.32, "scale": Vector3.ONE * 0.9, "fallback": Vector3(2.8, 1.0, 1.5), "block": true },
+		{ "key": "cargo_depot", "source": "kaykit", "pos": Vector3(16.2, 0.0, -8.8), "rot": -0.28, "scale": Vector3.ONE * 0.9, "fallback": Vector3(2.6, 1.0, 1.6), "block": true },
+		{ "key": "structure_tall", "source": "kaykit", "pos": Vector3(-18.2, 0.0, 0.0), "rot": 0.0, "scale": Vector3.ONE * 0.8, "fallback": Vector3(1.5, 2.2, 1.5), "block": true },
+		{ "key": "structure_tall", "source": "kaykit", "pos": Vector3(18.2, 0.0, 0.4), "rot": PI, "scale": Vector3.ONE * 0.8, "fallback": Vector3(1.5, 2.2, 1.5), "block": true },
+		{ "key": "prop_light_wide", "source": "megakit", "pos": Vector3(-10.0, 0.04, 10.4), "rot": 0.0, "scale": Vector3.ONE * 0.82, "fallback": Vector3(1.1, 0.18, 0.5), "block": false },
+		{ "key": "prop_light_wide", "source": "megakit", "pos": Vector3(10.0, 0.04, 10.4), "rot": PI, "scale": Vector3.ONE * 0.82, "fallback": Vector3(1.1, 0.18, 0.5), "block": false }
+	]
+	for index in range(dressing.size()):
+		var item: Dictionary = dressing[index]
+		var paths := KAYKIT_MODEL_PATHS if String(item.get("source", "")) == "kaykit" else MEGAKIT_MODEL_PATHS
+		var key := String(item["key"])
+		var model := _add_scene_model_scaled(paths.get(key, ""), prop_root, item["pos"], item["scale"], float(item["rot"]))
+		if model:
+			model.name = "ImportedDressing%s" % key.capitalize()
+			if bool(item.get("block", false)):
+				var fallback_size: Vector3 = item["fallback"]
+				_register_model_obstacle(model, item["pos"] + Vector3(0.0, fallback_size.y * 0.5, 0.0), fallback_size, "ImportedDressing%d" % index, 0.14)
+			continue
+		var fallback_size: Vector3 = item["fallback"]
+		var fallback := _make_box(fallback_size, materials["panel"], item["pos"] + Vector3(0, fallback_size.y * 0.5, 0), prop_root)
+		fallback.rotation.y = float(item["rot"])
+		if bool(item.get("block", false)):
+			_register_box_obstacle(item["pos"] + Vector3(0, fallback_size.y * 0.5, 0), fallback_size, "ImportedDressing%d" % index)
 
 func _create_playfield_cover() -> void:
 	var cover_items := [
-		{ "pos": Vector3(-5.6, 0.0, -1.6), "size": Vector3(1.5, 0.75, 0.72), "rot": 0.18 },
-		{ "pos": Vector3(5.6, 0.0, -1.6), "size": Vector3(1.5, 0.75, 0.72), "rot": -0.18 },
-		{ "pos": Vector3(-6.8, 0.0, 3.2), "size": Vector3(1.2, 0.65, 0.68), "rot": -0.45 },
-		{ "pos": Vector3(6.8, 0.0, 3.2), "size": Vector3(1.2, 0.65, 0.68), "rot": 0.45 }
+		{ "pos": Vector3(-9.2, 0.0, -3.4), "size": Vector3(1.8, 0.75, 0.72), "rot": 0.18 },
+		{ "pos": Vector3(9.2, 0.0, -3.4), "size": Vector3(1.8, 0.75, 0.72), "rot": -0.18 },
+		{ "pos": Vector3(-12.8, 0.0, 4.6), "size": Vector3(1.4, 0.65, 0.68), "rot": -0.45 },
+		{ "pos": Vector3(12.8, 0.0, 4.6), "size": Vector3(1.4, 0.65, 0.68), "rot": 0.45 },
+		{ "pos": Vector3(-4.2, 0.0, 8.4), "size": Vector3(1.6, 0.65, 0.76), "rot": 0.35 },
+		{ "pos": Vector3(4.2, 0.0, 8.4), "size": Vector3(1.6, 0.65, 0.76), "rot": -0.35 }
 	]
 	for index in range(cover_items.size()):
 		var item: Dictionary = cover_items[index]
@@ -691,37 +884,44 @@ func _load_level_layout(level_index: int, move_players: bool = false) -> void:
 	match level_index:
 		-1:
 			segments = [
-				{ "name": "AttractNorthRail", "pos": Vector3(-5.8, 0.22, 1.95), "size": Vector3(5.2, 0.44, 0.24) },
-				{ "name": "AttractSouthRail", "pos": Vector3(5.8, 0.22, -2.2), "size": Vector3(5.2, 0.44, 0.24) },
-				{ "name": "AttractLeftGuide", "pos": Vector3(-2.7, 0.22, -1.9), "size": Vector3(0.24, 0.44, 4.3) },
-				{ "name": "AttractRightGuide", "pos": Vector3(2.7, 0.22, 1.8), "size": Vector3(0.24, 0.44, 4.2) }
+				{ "name": "AttractNorthRail", "pos": Vector3(-9.6, 0.22, 3.4), "size": Vector3(10.4, 0.44, 0.26), "asset": "short_wall" },
+				{ "name": "AttractSouthRail", "pos": Vector3(9.4, 0.22, -3.4), "size": Vector3(10.4, 0.44, 0.26), "asset": "wall_window" },
+				{ "name": "AttractLeftGuide", "pos": Vector3(-4.9, 0.22, -2.2), "size": Vector3(0.26, 0.44, 8.4), "asset": "wall_astra" },
+				{ "name": "AttractRightGuide", "pos": Vector3(4.9, 0.22, 2.2), "size": Vector3(0.26, 0.44, 8.4), "asset": "wall_astra_divided" },
+				{ "name": "AttractCenterSpine", "pos": Vector3(0.0, 0.22, 0.0), "size": Vector3(7.2, 0.44, 0.24), "asset": "short_wall" }
 			]
-			guides = [Vector3(-1.1, 0.045, 4.9), Vector3(-2.35, 0.045, 1.0), Vector3(-2.35, 0.045, -4.9), Vector3(2.35, 0.045, -4.9), Vector3(2.35, 0.045, 1.0), Vector3(1.1, 0.045, 4.9)]
+			guides = [Vector3(-2.0, 0.045, 9.6), Vector3(-6.8, 0.045, 4.4), Vector3(-7.6, 0.045, -5.6), Vector3(7.6, 0.045, -5.6), Vector3(6.8, 0.045, 4.4), Vector3(2.0, 0.045, 9.6)]
 		0:
 			segments = [
-				{ "name": "SparkLeftLane", "pos": Vector3(-5.9, 0.22, 1.9), "size": Vector3(6.2, 0.44, 0.24) },
-				{ "name": "SparkRightLane", "pos": Vector3(5.9, 0.22, -1.9), "size": Vector3(6.2, 0.44, 0.24) },
-				{ "name": "SparkWestTurn", "pos": Vector3(-3.1, 0.22, -2.45), "size": Vector3(0.24, 0.44, 4.1) },
-				{ "name": "SparkEastTurn", "pos": Vector3(3.1, 0.22, 2.45), "size": Vector3(0.24, 0.44, 4.1) }
+				{ "name": "CellNorthServiceWall", "pos": Vector3(-7.4, 0.22, 5.8), "size": Vector3(17.0, 0.44, 0.28), "asset": "wall_astra_window" },
+				{ "name": "CellEastServiceWall", "pos": Vector3(10.4, 0.22, 5.8), "size": Vector3(11.2, 0.44, 0.28), "asset": "wall_window" },
+				{ "name": "CellSouthServiceWall", "pos": Vector3(5.6, 0.22, -6.0), "size": Vector3(20.4, 0.44, 0.28), "asset": "wall_astra" },
+				{ "name": "CellWestVerticalRun", "pos": Vector3(-12.4, 0.22, -0.8), "size": Vector3(0.28, 0.44, 11.4), "asset": "wall_astra_divided" },
+				{ "name": "CellCenterVerticalRun", "pos": Vector3(-1.2, 0.22, 0.6), "size": Vector3(0.28, 0.44, 8.8), "asset": "short_wall" },
+				{ "name": "CellEastVerticalRun", "pos": Vector3(12.6, 0.22, -0.8), "size": Vector3(0.28, 0.44, 10.6), "asset": "wall_astra" },
+				{ "name": "CellMaintenancePocket", "pos": Vector3(-0.4, 0.22, -9.3), "size": Vector3(10.4, 0.44, 0.26), "asset": "short_wall" }
 			]
-			guides = [Vector3(0.0, 0.045, 4.4), Vector3(-2.2, 0.045, 1.0), Vector3(-2.8, 0.045, -3.6), Vector3(2.8, 0.045, -3.6), Vector3(2.2, 0.045, 1.0)]
+			guides = [Vector3(0.0, 0.045, 10.2), Vector3(-7.5, 0.045, 7.0), Vector3(-14.4, 0.045, 1.0), Vector3(-8.6, 0.045, -8.5), Vector3(8.8, 0.045, -8.5), Vector3(14.4, 0.045, 1.0), Vector3(7.2, 0.045, 7.0)]
 		1:
 			segments = [
-				{ "name": "GateSplitCenter", "pos": Vector3(0.0, 0.22, -1.4), "size": Vector3(0.26, 0.44, 8.5) },
-				{ "name": "GateLeftElbow", "pos": Vector3(-6.1, 0.22, 1.25), "size": Vector3(4.1, 0.44, 0.24) },
-				{ "name": "GateRightElbow", "pos": Vector3(6.1, 0.22, 1.25), "size": Vector3(4.1, 0.44, 0.24) },
-				{ "name": "GateNorthSwitchback", "pos": Vector3(0.0, 0.22, 3.25), "size": Vector3(7.8, 0.44, 0.24) }
+				{ "name": "BlastDoorCenterBulkhead", "pos": Vector3(0.0, 0.22, -1.6), "size": Vector3(0.34, 0.44, 17.0), "asset": "wall_astra" },
+				{ "name": "BlastDoorWestHall", "pos": Vector3(-9.6, 0.22, 4.4), "size": Vector3(12.0, 0.44, 0.28), "asset": "wall_window" },
+				{ "name": "BlastDoorEastHall", "pos": Vector3(9.6, 0.22, -6.0), "size": Vector3(12.0, 0.44, 0.28), "asset": "wall_window" },
+				{ "name": "BlastDoorNorthSwitchback", "pos": Vector3(0.0, 0.22, 8.0), "size": Vector3(15.4, 0.44, 0.28), "asset": "short_wall" },
+				{ "name": "BlastDoorSouthSwitchback", "pos": Vector3(0.0, 0.22, -9.3), "size": Vector3(15.4, 0.44, 0.28), "asset": "short_wall" }
 			]
-			guides = [Vector3(-6.7, 0.045, -1.4), Vector3(-2.2, 0.045, -4.8), Vector3(2.2, 0.045, -4.8), Vector3(6.7, 0.045, -1.4)]
+			guides = [Vector3(-1.0, 0.045, 10.0), Vector3(-9.5, 0.045, 5.9), Vector3(-15.6, 0.045, -4.6), Vector3(-5.2, 0.045, -10.0), Vector3(5.2, 0.045, -10.0), Vector3(15.6, 0.045, -4.6), Vector3(9.5, 0.045, 5.9)]
 		2:
 			segments = [
-				{ "name": "DemoLeftCover", "pos": Vector3(-4.9, 0.22, -3.9), "size": Vector3(4.1, 0.44, 0.24) },
-				{ "name": "DemoRightCover", "pos": Vector3(4.9, 0.22, -3.9), "size": Vector3(4.1, 0.44, 0.24) },
-				{ "name": "DemoSouthPocket", "pos": Vector3(0.0, 0.22, 2.25), "size": Vector3(6.6, 0.44, 0.24) },
-				{ "name": "DemoLeftWing", "pos": Vector3(-7.6, 0.22, -0.8), "size": Vector3(0.24, 0.44, 4.5) },
-				{ "name": "DemoRightWing", "pos": Vector3(7.6, 0.22, -0.8), "size": Vector3(0.24, 0.44, 4.5) }
+				{ "name": "BeaconLeftCover", "pos": Vector3(-9.2, 0.22, -7.0), "size": Vector3(8.8, 0.44, 0.28), "asset": "wall_astra_window" },
+				{ "name": "BeaconRightCover", "pos": Vector3(9.2, 0.22, -7.0), "size": Vector3(8.8, 0.44, 0.28), "asset": "wall_astra_window" },
+				{ "name": "BeaconSouthPocket", "pos": Vector3(0.0, 0.22, 5.6), "size": Vector3(14.8, 0.44, 0.28), "asset": "short_wall" },
+				{ "name": "BeaconLeftWing", "pos": Vector3(-14.2, 0.22, -0.4), "size": Vector3(0.28, 0.44, 9.4), "asset": "wall_astra_divided" },
+				{ "name": "BeaconRightWing", "pos": Vector3(14.2, 0.22, -0.4), "size": Vector3(0.28, 0.44, 9.4), "asset": "wall_astra_divided" },
+				{ "name": "BeaconCenterCoverA", "pos": Vector3(-4.0, 0.22, -1.6), "size": Vector3(0.28, 0.44, 5.2), "asset": "short_wall" },
+				{ "name": "BeaconCenterCoverB", "pos": Vector3(4.0, 0.22, 1.8), "size": Vector3(0.28, 0.44, 5.2), "asset": "short_wall" }
 			]
-			guides = [Vector3(0.0, 0.045, 3.5), Vector3(-3.4, 0.045, -1.3), Vector3(3.4, 0.045, -1.3), Vector3(0.0, 0.045, -5.0)]
+			guides = [Vector3(0.0, 0.045, 9.4), Vector3(-8.0, 0.045, 4.4), Vector3(-12.2, 0.045, -4.0), Vector3(-4.2, 0.045, -9.2), Vector3(4.2, 0.045, -9.2), Vector3(12.2, 0.045, -4.0), Vector3(8.0, 0.045, 4.4)]
 		_:
 			segments = []
 	for segment in segments:
@@ -752,15 +952,34 @@ func _add_level_barrier(segment: Dictionary) -> void:
 	var name := "Level%s" % String(segment["name"])
 	var position: Vector3 = segment["pos"]
 	var size: Vector3 = segment["size"]
-	var wall := _make_box(size, materials["glass"], position, level_root)
+	var horizontal := size.x >= size.z
+	var visual_size := Vector3(size.x, 1.1, max(size.z, 0.72)) if horizontal else Vector3(max(size.x, 0.72), 1.1, size.z)
+	var visual_center := Vector3(position.x, 0.55, position.z)
+	var wall := _make_box(visual_size, materials["wall"], visual_center, level_root)
 	wall.name = name
-	var rail_size := Vector3(size.x + 0.12, 0.05, 0.18) if size.x >= size.z else Vector3(0.18, 0.05, size.z + 0.12)
-	var rail := _make_box(rail_size, materials["edge"], position + Vector3(0.0, size.y * 0.5 + 0.035, 0.0), level_root)
+	var rail_size := Vector3(visual_size.x + 0.18, 0.07, 0.2) if horizontal else Vector3(0.2, 0.07, visual_size.z + 0.18)
+	var rail := _make_box(rail_size, materials["edge"], visual_center + Vector3(0.0, 0.62, 0.0), level_root)
 	rail.name = "%sTopRail" % name
-	var base_size := Vector3(size.x + 0.08, 0.06, 0.2) if size.x >= size.z else Vector3(0.2, 0.06, size.z + 0.08)
-	var base := _make_box(base_size, materials["floor_trim"], position - Vector3(0.0, size.y * 0.5 - 0.03, 0.0), level_root)
+	var base_size := Vector3(visual_size.x + 0.1, 0.08, 0.82) if horizontal else Vector3(0.82, 0.08, visual_size.z + 0.1)
+	var base := _make_box(base_size, materials["floor_trim"], Vector3(position.x, 0.06, position.z), level_root)
 	base.name = "%sBaseRail" % name
-	_register_box_obstacle(position, Vector3(size.x + 0.1, 0.9, size.z + 0.1), name)
+	_add_barrier_wall_models(name, position, visual_size, String(segment.get("asset", "wall_astra")))
+	_register_box_obstacle(visual_center, Vector3(visual_size.x + 0.22, 1.45, visual_size.z + 0.22), name)
+
+func _add_barrier_wall_models(name: String, position: Vector3, visual_size: Vector3, asset_key: String) -> void:
+	if not MEGAKIT_MODEL_PATHS.has(asset_key):
+		return
+	var horizontal := visual_size.x >= visual_size.z
+	var length: float = visual_size.x if horizontal else visual_size.z
+	var count: int = clamp(int(ceil(length / 3.0)), 1, 9)
+	for index in range(count):
+		var t: float = 0.5 if count == 1 else float(index) / float(count - 1)
+		var offset: float = lerp(-length * 0.5 + 1.25, length * 0.5 - 1.25, t)
+		var model_position := position + (Vector3(offset, 0.08, 0.0) if horizontal else Vector3(0.0, 0.08, offset))
+		var rotation_y := 0.0 if horizontal else PI / 2.0
+		var model := _add_scene_model_scaled(MEGAKIT_MODEL_PATHS[asset_key], level_root, model_position, Vector3.ONE * 0.72, rotation_y)
+		if model:
+			model.name = "%sAsset%d" % [name, index]
 
 func _add_level_guide(position: Vector3, index: int) -> void:
 	var guide := _make_box(Vector3(0.46, 0.035, 0.46), materials["accent"], position, level_root)
@@ -791,22 +1010,22 @@ func _move_joined_players_to_level_start(level_index: int) -> void:
 func _level_start_positions(level_index: int) -> Array[Vector3]:
 	match level_index:
 		1:
-			return [Vector3(-0.8, 0.0, 5.25), Vector3(0.8, 0.0, 5.25)]
+			return [Vector3(-1.2, 0.0, 10.4), Vector3(1.2, 0.0, 10.4)]
 		2:
-			return [Vector3(-0.8, 0.0, 4.15), Vector3(0.8, 0.0, 4.15)]
+			return [Vector3(-1.2, 0.0, 9.8), Vector3(1.2, 0.0, 9.8)]
 		_:
-			return [Vector3(-0.8, 0.0, 5.15), Vector3(0.8, 0.0, 5.15)]
+			return [Vector3(-1.2, 0.0, 10.8), Vector3(1.2, 0.0, 10.8)]
 
 func _level_name(level_index: int) -> String:
 	match level_index:
 		0:
-			return "Spark Switchback"
+			return "Service Lanes"
 		1:
-			return "Gate Split"
+			return "Blast Door"
 		2:
-			return "Demo Hold"
+			return "Rescue Beacon"
 		_:
-			return "Attract Loop"
+			return "Deck 7 Preview"
 
 func _spawn_model_or_block(path: String, position: Vector3, rotation_y: float, scale_value: float, fallback_size: Vector3) -> Node3D:
 	var model: Node3D = _load_model_instance(path)
@@ -832,6 +1051,9 @@ func _spawn_quaternius_model(key: String, position: Vector3, rotation_y: float, 
 	return fallback
 
 func _add_scene_model(path: String, parent: Node3D, position: Vector3, scale_value: float, rotation_y: float, material: Material = null) -> Node3D:
+	return _add_scene_model_scaled(path, parent, position, Vector3.ONE * scale_value, rotation_y, material)
+
+func _add_scene_model_scaled(path: String, parent: Node3D, position: Vector3, scale_value: Vector3, rotation_y: float, material: Material = null) -> Node3D:
 	if path.is_empty():
 		return null
 	var model: Node3D = _load_model_instance(path)
@@ -839,7 +1061,7 @@ func _add_scene_model(path: String, parent: Node3D, position: Vector3, scale_val
 		return null
 	model.position = position
 	model.rotation.y = rotation_y
-	model.scale = Vector3.ONE * scale_value
+	model.scale = scale_value
 	_apply_model_materials(model, material)
 	parent.add_child(model)
 	return model
@@ -946,6 +1168,7 @@ func _create_player(payload: Dictionary, start_position: Vector3, joined: bool) 
 		"playerId": payload.get("playerId", "guest"),
 		"displayName": payload.get("displayName", slot),
 		"level": payload.get("level", 1),
+		"isGuest": bool(payload.get("isGuest", String(payload.get("playerId", "guest")) == "guest")),
 		"payload": payload,
 		"node": node,
 		"position": start_position,
@@ -1275,15 +1498,16 @@ func _enter_attract_scene() -> void:
 	phase = "attract"
 	scene_timer = 0.0
 	attract_demo_time = 0.0
+	briefing_objectives_ready = false
 	join_remaining = JOIN_COUNTDOWN_SECONDS
 	mission_index = 0
-	mission_status = "Attract demo is previewing the next route."
+	mission_status = "Attract mode is previewing the Deck 7 rescue."
 	_load_level_layout(-1)
 	if player_root:
 		player_root.visible = false
 	if attract_demo_root:
 		attract_demo_root.visible = true
-	_show_phase_scene("Attract Demo", "Watch the route, then move or fire to open the join window.", Color("#73FBD3"), 0.0, "radial")
+	_show_phase_scene("Deck 7 Preview", "Watch the rescue path, then move or fire to open the join window.", Color("#73FBD3"), 0.0, "radial")
 
 func _update_attract_scene(delta: float) -> void:
 	scene_timer += delta
@@ -1297,15 +1521,17 @@ func _update_attract_scene(delta: float) -> void:
 func _start_join_window() -> void:
 	phase = "join"
 	scene_timer = 0.0
+	briefing_objectives_ready = false
+	_hide_opening_cinematic()
 	join_remaining = 4.0 if players.size() > 1 and bool(players[1]["joined"]) else JOIN_COUNTDOWN_SECONDS
 	if player_root:
 		player_root.visible = true
 	if attract_demo_root:
 		attract_demo_root.visible = false
 	_refresh_player_visibility()
-	mission_status = "P2 can join before the route locks."
+	mission_status = "Deployment countdown is active. Player slots show Nexus Passport or Guest Mode."
 	_play_sound("select")
-	_show_phase_scene("Join Window", "P2 can press Enter. Route locks when the countdown ends.", Color("#73FBD3"), 3.4, "horizontal")
+	_show_phase_scene("Join Window", "Confirm operators. The rescue team deploys when the countdown reaches zero.", Color("#73FBD3"), 3.4, "horizontal")
 
 func _start_briefing_scene() -> void:
 	active_player_count = _joined_players().size()
@@ -1315,34 +1541,194 @@ func _start_briefing_scene() -> void:
 		_refresh_player_visibility()
 	phase = "briefing"
 	scene_timer = BRIEFING_SECONDS
+	cinematic_time = 0.0
+	cinematic_beat_index = -1
 	mission_index = 0
-	mission_status = _story_brief_for_index(0)
+	mission_status = "Opening cinematic: Deck 7 lockdown briefing."
+	_load_level_layout(0, true)
+	_create_missions()
+	briefing_objectives_ready = true
+	if player_root:
+		player_root.visible = true
+	if attract_demo_root:
+		attract_demo_root.visible = false
+	_refresh_player_visibility()
 	_play_sound("click")
-	_show_phase_scene(_story_title_for_index(0), _story_brief_for_index(0), Color("#FFD166"), BRIEFING_SECONDS, "curtains")
+	if music_player and not music_player.playing:
+		music_player.volume_db = -20.0
+		music_player.play()
+	_show_opening_cinematic()
+	_set_opening_cinematic_beat(0)
 
 func _update_briefing_scene(delta: float) -> void:
 	scene_timer = max(0.0, scene_timer - delta)
+	cinematic_time = BRIEFING_SECONDS - scene_timer
+	_update_opening_cinematic_beat()
+	_update_opening_cinematic_prompt()
+	if cinematic_time >= CINEMATIC_SKIP_GRACE_SECONDS and _start_input_pressed():
+		_start_mission_run()
+		return
 	if scene_timer <= 0.0:
 		_start_mission_run()
 
+func _show_opening_cinematic() -> void:
+	if phase_scene_panel:
+		phase_scene_panel.visible = false
+		phase_scene_title_label.visible = false
+		phase_scene_body_label.visible = false
+	_set_primary_hud_visible(false)
+	if storyboard_panel:
+		storyboard_panel.visible = false
+	var controls := [
+		cinematic_letterbox_top,
+		cinematic_letterbox_bottom,
+		cinematic_panel,
+		cinematic_title_label,
+		cinematic_body_label,
+		cinematic_prompt_label
+	]
+	for control in controls:
+		if control:
+			control.visible = true
+			control.modulate = Color(1, 1, 1, 1)
+	_update_opening_cinematic_prompt()
+
+func _hide_opening_cinematic() -> void:
+	var controls := [
+		cinematic_letterbox_top,
+		cinematic_letterbox_bottom,
+		cinematic_panel,
+		cinematic_title_label,
+		cinematic_body_label,
+		cinematic_prompt_label
+	]
+	for control in controls:
+		if control:
+			control.visible = false
+	_set_primary_hud_visible(true)
+	if storyboard_panel:
+		storyboard_panel.visible = true
+
+func _set_primary_hud_visible(is_visible: bool) -> void:
+	var controls := [
+		title_label,
+		countdown_label,
+		mission_label,
+		status_label,
+		score_label,
+		timer_label,
+		p1_label,
+		p2_label,
+		controls_label
+	]
+	for control in controls:
+		if control:
+			control.visible = is_visible
+
+func _set_cinematic_text(title: String, body: String, color: Color, prompt: String) -> void:
+	if cinematic_title_label:
+		cinematic_title_label.text = title
+		cinematic_title_label.add_theme_color_override("font_color", color)
+	if cinematic_body_label:
+		cinematic_body_label.text = body
+	if cinematic_prompt_label:
+		cinematic_prompt_label.text = prompt
+	if cinematic_panel:
+		cinematic_panel.add_theme_stylebox_override("panel", _make_panel_style(Color(0.02, 0.04, 0.08, 0.9), color))
+
+func _update_opening_cinematic_beat() -> void:
+	var next_index := 0
+	for index in range(OPENING_CINEMATIC_BEATS.size()):
+		var beat: Dictionary = OPENING_CINEMATIC_BEATS[index]
+		if cinematic_time >= float(beat.get("at", 0.0)):
+			next_index = index
+	if next_index != cinematic_beat_index:
+		_set_opening_cinematic_beat(next_index)
+
+func _set_opening_cinematic_beat(index: int) -> void:
+	if index < 0 or index >= OPENING_CINEMATIC_BEATS.size():
+		return
+	cinematic_beat_index = index
+	var beat: Dictionary = OPENING_CINEMATIC_BEATS[index]
+	var beat_color := Color(String(beat.get("color", "#73FBD3")))
+	var title := String(beat.get("title", "Mission Briefing"))
+	var body := String(beat.get("body", ""))
+	mission_status = body
+	_set_cinematic_text(title, body, beat_color, cinematic_prompt_label.text if cinematic_prompt_label else "")
+	var sound_key := String(beat.get("sound", "select"))
+	if not sound_key.is_empty():
+		_play_sound(sound_key)
+	_trigger_scene_transition(beat_color.darkened(0.72), String(beat.get("pattern", "fade")))
+	var focus: Vector3 = beat.get("focus", Vector3.ZERO)
+	_spawn_burst(Vector3(focus.x, 0.42, focus.z), beat_color, 0.72)
+
+func _update_opening_cinematic_prompt() -> void:
+	if not cinematic_prompt_label:
+		return
+	if cinematic_time >= CINEMATIC_SKIP_GRACE_SECONDS:
+		cinematic_prompt_label.text = "Move/fire to launch early    Auto-launch in %02d" % int(ceil(scene_timer))
+	else:
+		cinematic_prompt_label.text = "Mission briefing"
+
 func _start_intermission_scene(completed_name: String, message: String) -> void:
 	phase = "intermission"
-	scene_timer = INTERMISSION_SECONDS
+	scene_timer = STAGE_CINEMATIC_SECONDS
+	cinematic_time = 0.0
 	_load_level_layout(mission_index, true)
+	_refresh_objective_visibility()
 	var next_title := _story_title_for_index(mission_index)
 	var next_brief := _story_brief_for_index(mission_index)
 	mission_status = "Loading level: %s" % _level_name(mission_index)
-	_show_phase_scene("%s Complete" % completed_name, "%s\nNext level: %s\n%s" % [message, _level_name(mission_index), next_brief], Color("#FFD166"), INTERMISSION_SECONDS, "diagonal")
+	_play_sound("switch")
+	_show_opening_cinematic()
+	_set_cinematic_text(
+		"%s Cleared" % completed_name,
+		"%s\n\nNext deck: %s\n%s" % [message, _level_name(mission_index), next_brief],
+		Color("#FFD166"),
+		"Next stage in %02d" % int(ceil(scene_timer))
+	)
+	_trigger_scene_transition(Color("#33270A"), "diagonal")
 
 func _update_intermission_scene(delta: float) -> void:
 	scene_timer = max(0.0, scene_timer - delta)
-	if camera:
-		var orbit_focus := Vector3(0.0, 1.25, 0.0)
-		camera_focus = camera_focus.lerp(orbit_focus, min(1.0, delta * 1.8))
+	cinematic_time = STAGE_CINEMATIC_SECONDS - scene_timer
+	if cinematic_prompt_label:
+		cinematic_prompt_label.text = "Next stage in %02d" % int(ceil(scene_timer))
 	if scene_timer <= 0.0:
 		phase = "play"
+		_hide_opening_cinematic()
+		_refresh_objective_visibility()
 		mission_status = _story_brief_for_index(mission_index)
 		_show_phase_scene("%s: %s" % [_level_name(mission_index), _story_title_for_index(mission_index)], _story_brief_for_index(mission_index), Color("#73FBD3"), 2.8, "circle")
+
+func _start_ending_cinematic(message: String) -> void:
+	phase = "ending"
+	scene_timer = ENDING_CINEMATIC_SECONDS
+	cinematic_time = 0.0
+	ending_cinematic_message = message
+	mission_status = "Extraction lift is docking."
+	_play_sound("confirm")
+	_show_opening_cinematic()
+	_set_cinematic_text(
+		"EXTRACTION LOCKED",
+		"The lift catches the beacon and burns through the blackout. Survivors are moving toward the open door.",
+		Color("#73FBD3"),
+		"Saving result after cinematic"
+	)
+	_trigger_scene_transition(Color("#073326"), "circle")
+	if not drone.is_empty():
+		if drone.has("node"):
+			var drone_node: Node3D = drone["node"]
+			drone_node.visible = true
+		_spawn_burst(drone["position"] + Vector3(0, 0.8, 0), Color("#73FBD3"), 1.45)
+
+func _update_ending_cinematic(delta: float) -> void:
+	scene_timer = max(0.0, scene_timer - delta)
+	cinematic_time = ENDING_CINEMATIC_SECONDS - scene_timer
+	if cinematic_prompt_label:
+		cinematic_prompt_label.text = "Extraction complete    Saving in %02d" % int(ceil(scene_timer))
+	if scene_timer <= 0.0:
+		_finish_game(true, ending_cinematic_message)
 
 func _start_input_pressed() -> bool:
 	return (
@@ -1482,7 +1868,7 @@ func _update_join_countdown(delta: float) -> void:
 	if _joined_players().size() >= 2:
 		join_remaining = min(join_remaining, 2.5)
 	if join_remaining <= 0.0:
-		_start_mission_run()
+		_start_briefing_scene()
 
 func _join_second_player() -> void:
 	if players.size() < 2 or bool(players[1]["joined"]):
@@ -1490,10 +1876,12 @@ func _join_second_player() -> void:
 	players[1]["joined"] = true
 	players[1]["node"].visible = true
 	_play_sound("switch")
-	_show_story_event("Second operator joined", "Linked co-op objectives will activate when the countdown ends.")
+	_show_story_event("Second operator joined", "Duo extraction is active. Split roles when the lockdown opens.")
 	join_remaining = min(join_remaining, 3.0)
 
 func _start_mission_run() -> void:
+	var use_briefing_objectives := briefing_objectives_ready and phase == "briefing"
+	_hide_opening_cinematic()
 	active_player_count = _joined_players().size()
 	if active_player_count <= 0:
 		players[0]["joined"] = true
@@ -1507,15 +1895,21 @@ func _start_mission_run() -> void:
 	sync_progress = 0.0
 	sync_required = 3.5 if active_player_count > 1 else 4.7
 	camera_heading = Vector3(0.0, 0.0, -1.0)
-	_load_level_layout(0, true)
+	if not use_briefing_objectives:
+		_load_level_layout(0, true)
 	if players.size() > 0:
 		camera_focus = players[0]["position"] + Vector3(0, 1.05, 0)
 		camera.position = _safe_camera_position(camera_focus + Vector3(0, 3.35, 5.1), camera_focus)
-	_create_missions()
+	if not use_briefing_objectives:
+		_create_missions()
+	_refresh_objective_visibility()
+	briefing_objectives_ready = false
 	_play_sound("confirm")
 	if music_player and not music_player.playing:
 		music_player.play()
-	mission_status = "Safe launch: learn movement and collect nearby sparks."
+	if music_player:
+		music_player.volume_db = -16.0
+	mission_status = "Safe launch: follow the amber power-cell route before drones fully wake."
 	_show_phase_scene("%s: %s" % [_level_name(0), _story_title_for_index(0)], mission_status, Color("#73FBD3"), 2.8, "circle")
 	if players.size() > 0:
 		_spawn_burst(players[0]["position"] + Vector3(0, 0.4, 0), Color("#73FBD3"), 0.9)
@@ -1532,6 +1926,8 @@ func _create_missions() -> void:
 	physics_props.clear()
 	projectiles.clear()
 	fx_events.clear()
+	power_cell_index = 0
+	relay_sequence_index = 0
 
 	var anchors := _generate_objective_anchors()
 	anchors["relay_alpha"] = _safe_spawn_position(anchors["relay_alpha"], 1.32)
@@ -1542,30 +1938,39 @@ func _create_missions() -> void:
 		_spawn_relay_pad("omega", anchors["relay_omega"], materials["p2"])
 	]
 
-	var core_count := 7 if active_player_count > 1 else 5
+	var core_count: int = POWER_CELL_ROUTE.size()
 	for index in range(core_count):
-		data_cores.append(_spawn_core(_random_open_point_away_from_players(ARENA_RECT.grow(-2.0), 1.05, 1.9), index))
+		var core_position := _safe_spawn_position(POWER_CELL_ROUTE[index], 1.05)
+		data_cores.append(_spawn_core(core_position, index))
+	_refresh_power_cell_targets()
 
-	for index in range(4 if active_player_count > 1 else 3):
-		supply_caches.append(_spawn_supply_cache(_random_open_point_away_from_players(ARENA_RECT.grow(-1.8), 1.2, 2.8), index))
+	var cache_count := 5 if active_player_count > 1 else 4
+	for index in range(cache_count):
+		var cache_position: Vector3 = SUPPLY_CACHE_POINTS[index % SUPPLY_CACHE_POINTS.size()]
+		supply_caches.append(_spawn_supply_cache(_safe_spawn_position(cache_position, 1.2), index))
 
-	for index in range(1 if active_player_count > 1 else 0):
-		hazards.append(_spawn_hazard(_random_open_point_away_from_players(ARENA_RECT.grow(-2.2), 1.7, 7.0), rng.randf_range(0.75, 0.95), index))
+	if active_player_count > 1:
+		hazards.append(_spawn_hazard(_safe_spawn_position(Vector3(0.0, 0.0, -1.0), 1.7), 0.92, 0))
 
-	for index in range(2 if active_player_count > 1 else 1):
-		sentries.append(_spawn_sentry(_random_open_point_away_from_players(ARENA_RECT.grow(-2.0), 1.1, 8.6), index))
+	var sentry_count := 3 if active_player_count > 1 else 2
+	for index in range(sentry_count):
+		var sentry_position: Vector3 = SENTRY_HOME_POINTS[index % SENTRY_HOME_POINTS.size()]
+		sentries.append(_spawn_sentry(_safe_spawn_position(sentry_position, 1.1), index))
 
-	for index in range(4 if active_player_count > 1 else 3):
-		physics_props.append(_spawn_physics_prop(_random_open_point_away_from_players(ARENA_RECT.grow(-1.7), 1.25, 2.8), index))
+	var prop_count := 6 if active_player_count > 1 else 5
+	for index in range(prop_count):
+		var prop_position: Vector3 = PHYSICS_PROP_POINTS[index % PHYSICS_PROP_POINTS.size()]
+		physics_props.append(_spawn_physics_prop(_safe_spawn_position(prop_position, 1.25), index))
 
 	drone = _spawn_extraction_gate(anchors["drone_target"])
+	_refresh_objective_visibility()
 
 func _generate_objective_anchors() -> Dictionary:
 	return {
-		"relay_alpha": Vector3(-6.9, 0.0, -1.4),
-		"relay_omega": Vector3(6.9, 0.0, -1.4),
-		"drone_start": Vector3(0.0, 0.0, 2.0),
-		"drone_target": Vector3(0.0, 0.0, -5.15)
+		"relay_alpha": Vector3(-15.4, 0.0, -4.4),
+		"relay_omega": Vector3(15.4, 0.0, -4.4),
+		"drone_start": Vector3(0.0, 0.0, 5.6),
+		"drone_target": Vector3(0.0, 0.0, -9.4)
 	}
 
 func _spawn_relay_pad(id: String, position: Vector3, material: Material) -> Dictionary:
@@ -1573,14 +1978,14 @@ func _spawn_relay_pad(id: String, position: Vector3, material: Material) -> Dict
 	node.name = "%sRelay" % id.capitalize()
 	node.position = position
 	objective_root.add_child(node)
-	var platform := _add_scene_model(QUATERNIUS_MODEL_PATHS["base_large"], node, Vector3(0, 0.04, 0), 0.2, 0.0)
+	var platform := _add_scene_model(MEGAKIT_MODEL_PATHS["platform_metal"], node, Vector3(0, 0.04, 0), 1.05, 0.0)
 	if platform:
 		platform.name = "RelayBase"
 	else:
 		_make_cylinder(1.05, 0.2, materials["panel"], Vector3(0, 0.1, 0), node)
-	var radar := _add_scene_model(QUATERNIUS_MODEL_PATHS["roof_radar"], node, Vector3(0, 0.14, 0), 0.18, 0.0)
+	var radar := _add_scene_model(MEGAKIT_MODEL_PATHS["prop_computer"], node, Vector3(0, 0.18, -0.06), 0.78, 0.0)
 	if radar:
-		radar.name = "RelayRadarArray"
+		radar.name = "RelayTerminalModel"
 	var beacon := _add_scene_model(QUATERNIUS_MODEL_PATHS["pickup_thunder"], node, Vector3(0, 0.74, 0), 0.62, 0.0)
 	if not beacon:
 		beacon = _make_sphere(0.24, material, Vector3(0, 0.74, 0), node)
@@ -1615,14 +2020,14 @@ func _spawn_core(position: Vector3, index: int) -> Dictionary:
 	light.light_energy = 0.62
 	light.omni_range = 3.4
 	node.add_child(light)
-	return { "id": "core-%d" % index, "position": position, "node": node, "collected": false }
+	return { "id": "core-%d" % index, "sequence": index, "position": position, "node": node, "light": light, "collected": false, "active": false }
 
 func _spawn_supply_cache(position: Vector3, index: int) -> Dictionary:
 	var node := Node3D.new()
 	node.name = "SupplyCache%d" % index
 	node.position = position + Vector3(0, 0.24, 0)
 	objective_root.add_child(node)
-	var crate := _add_scene_model(QUATERNIUS_MODEL_PATHS["pickup_crate"], node, Vector3(0, -0.05, 0), 0.44, rng.randf_range(0.0, TAU))
+	var crate := _add_scene_model(MEGAKIT_MODEL_PATHS["prop_crate3"], node, Vector3(0, -0.05, 0), 0.62, rng.randf_range(0.0, TAU))
 	if crate:
 		crate.name = "SupplyCrateModel"
 	else:
@@ -1639,6 +2044,50 @@ func _spawn_supply_cache(position: Vector3, index: int) -> Dictionary:
 	light.position = Vector3(0, 0.48, 0)
 	node.add_child(light)
 	return { "id": "supply-%d" % index, "position": position, "node": node, "collected": false, "radius": 1.05 }
+
+func _refresh_power_cell_targets() -> void:
+	for index in range(data_cores.size()):
+		var core: Dictionary = data_cores[index]
+		var is_collected := bool(core.get("collected", false))
+		var is_active := index == power_cell_index and not is_collected
+		var is_next := index == power_cell_index + 1 and not is_collected
+		core["active"] = is_active
+		var node: Node3D = core["node"]
+		if node:
+			node.visible = mission_index == 0 and not is_collected and (is_active or is_next)
+			node.scale = Vector3.ONE * (1.22 if is_active else 0.68)
+		var light := core.get("light") as OmniLight3D
+		if light:
+			light.light_energy = 1.12 if is_active else 0.18
+			light.omni_range = 4.8 if is_active else 1.9
+		data_cores[index] = core
+
+func _refresh_relay_targets() -> void:
+	for index in range(relay_pads.size()):
+		var pad: Dictionary = relay_pads[index]
+		var is_next := index == relay_sequence_index and not bool(pad.get("complete", false))
+		var node: Node3D = pad["node"]
+		if node:
+			node.scale = Vector3.ONE * (1.08 if is_next else 0.92)
+		var beacon = pad.get("beacon")
+		if beacon:
+			beacon.visible = is_next or bool(pad.get("complete", false))
+		relay_pads[index] = pad
+
+func _refresh_objective_visibility() -> void:
+	for core in data_cores:
+		var node: Node3D = core["node"]
+		if node:
+			node.visible = mission_index == 0 and not bool(core.get("collected", false))
+	for pad in relay_pads:
+		var node: Node3D = pad["node"]
+		if node:
+			node.visible = mission_index == 1
+	if not drone.is_empty() and drone.has("node"):
+		var node: Node3D = drone["node"]
+		node.visible = mission_index == 2
+	_refresh_power_cell_targets()
+	_refresh_relay_targets()
 
 func _spawn_hazard(position: Vector3, radius: float, index: int) -> Dictionary:
 	var hazard_root := Node3D.new()
@@ -1673,7 +2122,7 @@ func _spawn_sentry(position: Vector3, index: int) -> Dictionary:
 	node.name = "Sentry%d" % index
 	node.position = position + Vector3(0, 0.92, 0)
 	sentry_root.add_child(node)
-	var sentry_model := _add_scene_model(QUATERNIUS_MODEL_PATHS["enemy_small"], node, Vector3(0, -0.18, 0), 0.58, PI, materials["sentry_armor"])
+	var sentry_model := _add_scene_model(MEGAKIT_MODEL_PATHS["alien_cyclop"], node, Vector3(0, -0.12, 0), 0.54, PI)
 	if sentry_model:
 		sentry_model.name = "ImportedSeekerBody"
 	else:
@@ -1689,19 +2138,19 @@ func _spawn_sentry(position: Vector3, index: int) -> Dictionary:
 	sentry_light.light_energy = 0.36
 	sentry_light.omni_range = 2.1
 	node.add_child(sentry_light)
-	var patrol_angle := rng.randf_range(0.0, TAU)
+	var patrol_angle: float = float(index) / max(1.0, float(SENTRY_HOME_POINTS.size())) * TAU
 	return {
 		"position": position,
 		"home": position,
-		"velocity": Vector2(cos(patrol_angle), sin(patrol_angle)) * rng.randf_range(0.16, 0.3),
+		"velocity": Vector2.ZERO,
 		"radius": 0.62,
 		"node": node,
-		"speed": rng.randf_range(0.82, 1.12),
+		"speed": 0.74 + float(index % 3) * 0.07,
 		"health": SENTRY_HEALTH,
 		"alive": true,
 		"stunTimer": 0.0,
-		"attackCooldown": rng.randf_range(0.25, 0.65),
-		"alertRadius": SENTRY_ALERT_RADIUS + rng.randf_range(-0.6, 0.7),
+		"attackCooldown": 2.15 + float(index) * 0.28,
+		"alertRadius": SENTRY_ALERT_RADIUS + float(index % 2) * 0.25,
 		"patrolPhase": patrol_angle,
 		"aiState": "patrol"
 	}
@@ -1711,7 +2160,7 @@ func _spawn_physics_prop(position: Vector3, index: int) -> Dictionary:
 	node.name = "PushableCargo%d" % index
 	node.position = position + Vector3(0, 0.28, 0)
 	objective_root.add_child(node)
-	var crate := _add_scene_model(QUATERNIUS_MODEL_PATHS["pickup_crate"], node, Vector3(0, -0.08, 0), rng.randf_range(0.42, 0.52), rng.randf_range(0.0, TAU), materials["physics_prop"])
+	var crate := _add_scene_model(MEGAKIT_MODEL_PATHS["prop_crate4"], node, Vector3(0, -0.08, 0), rng.randf_range(0.58, 0.68), rng.randf_range(0.0, TAU))
 	if crate:
 		crate.name = "PhysicalCargoModel"
 	else:
@@ -1738,8 +2187,8 @@ func _spawn_extraction_gate(target: Vector3) -> Dictionary:
 	node.name = "ExtractionBreach"
 	node.position = target
 	objective_root.add_child(node)
-	_add_scene_model(QUATERNIUS_MODEL_PATHS["base_large"], node, Vector3(0, 0.06, 0), 0.28, 0.0)
-	_add_scene_model(QUATERNIUS_MODEL_PATHS["connector"], node, Vector3(0, 0.26, 0), 0.5, PI / 2.0)
+	_add_scene_model(KAYKIT_MODEL_PATHS["landing_pad"], node, Vector3(0, 0.02, 0), 1.05, 0.0)
+	_add_scene_model(MEGAKIT_MODEL_PATHS["door_frame"], node, Vector3(0, 0.22, -0.35), 1.25, PI)
 	var ship := _add_scene_model(QUATERNIUS_MODEL_PATHS["spaceship"], node, Vector3(0, 0.95, 0), 0.12, PI)
 	if ship:
 		ship.name = "ExitMarkerShip"
@@ -1773,7 +2222,7 @@ func _update_play(delta: float) -> void:
 	_update_hazards(delta)
 	_update_mission(delta)
 	if MAX_TIME_SECONDS - elapsed_seconds <= 0.0:
-		_finish_game(false, "Demo window closed before the prototype shipped.")
+		_finish_game(false, "The lift signal failed before extraction.")
 	elif _living_players() == 0:
 		_finish_game(false, "All joined operators were downed.")
 
@@ -1901,7 +2350,7 @@ func _update_projectiles(delta: float) -> void:
 		var radius: float = float(projectile["radius"])
 		projectile["ttl"] = float(projectile["ttl"]) - delta
 		var impact := false
-		if projectile["ttl"] <= 0.0 or _collides_with_static(next_position, radius):
+		if projectile["ttl"] <= 0.0 or _line_blocked_by_static(position, next_position, radius):
 			impact = true
 		else:
 			for sentry in sentries:
@@ -2138,46 +2587,57 @@ func _update_relay_mission(_delta: float) -> void:
 		if pad["complete"]:
 			activated += 1
 			continue
+		if index != relay_sequence_index:
+			continue
 		if _pad_has_player(pad):
 			pad["complete"] = true
 			relay_progress[index] = sync_required
 			activated += 1
+			relay_sequence_index = min(relay_sequence_index + 1, relay_pads.size())
 			team_score += 1100
 			_award_all_joined("assists", 1)
 			pad["node"].scale = Vector3.ONE * 1.12
 			_play_sound("switch")
 			_spawn_burst(pad["position"] + Vector3(0, 0.45, 0), Color("#73FBD3") if index == 0 else Color("#7CFF6B"), 1.0)
-			_show_objective_banner("Gate Framed", "%s principle locked. %d/%d online." % [String(pad["id"]).capitalize(), activated, relay_pads.size()], Color("#FFD166"))
-	mission_status = "Principle gates framed: %d/%d" % [activated, relay_pads.size()]
+			_show_objective_banner("Override Armed", "%s terminal online. %d/%d overrides active." % [String(pad["id"]).capitalize(), activated, relay_pads.size()], Color("#FFD166"))
+			_refresh_relay_targets()
+	mission_status = "Blast-door overrides active: %d/%d" % [activated, relay_pads.size()]
 	if activated >= relay_pads.size():
-		_complete_mission("Route framed. Move to the demo pad.")
+		_complete_mission("Blast door unlocked. Move to the rescue beacon.")
 
 func _update_core_mission(delta: float) -> void:
-	var remaining := 0
-	for core in data_cores:
+	if power_cell_index >= data_cores.size():
+		_complete_mission("Emergency power restored. Reach both override terminals.")
+		return
+	for index in range(data_cores.size()):
+		var core: Dictionary = data_cores[index]
 		if core["collected"]:
 			continue
-		remaining += 1
-		core["node"].rotation.y += delta * 1.8
-		for player in _joined_players():
-			if player["energy"] <= 0.0:
-				continue
-			var action := "%s_action" % String(player["slot"]).to_lower()
-			var distance := _flat_distance(player["position"], core["position"])
-			if distance <= 0.82 or (distance <= PLAYER_INTERACT_RADIUS and Input.is_action_just_pressed(action)):
-				core["collected"] = true
-				core["node"].visible = false
-				remaining -= 1
-				team_score += 800
-				player_stats[player["slot"]]["score"] += 800
-				player_stats[player["slot"]]["pickups"] += 1
-				player_stats[player["slot"]]["objectives"] += 1
-				_play_sound("select")
-				_spawn_burst(core["position"] + Vector3(0, 0.5, 0), Color("#FFD166"), 0.8)
-				break
-	mission_status = "Idea sparks remaining: %d" % max(remaining, 0)
-	if remaining <= 0:
-		_complete_mission("Spark pool ready. Frame the route.")
+		core["node"].rotation.y += delta * (2.6 if index == power_cell_index else 0.8)
+	var active_core: Dictionary = data_cores[power_cell_index]
+	for player in _joined_players():
+		if player["energy"] <= 0.0:
+			continue
+		var action := "%s_action" % String(player["slot"]).to_lower()
+		var distance := _flat_distance(player["position"], active_core["position"])
+		if distance <= 0.82 or (distance <= PLAYER_INTERACT_RADIUS and Input.is_action_just_pressed(action)):
+			active_core["collected"] = true
+			active_core["node"].visible = false
+			team_score += 800
+			player_stats[player["slot"]]["score"] += 800
+			player_stats[player["slot"]]["pickups"] += 1
+			player_stats[player["slot"]]["objectives"] += 1
+			_play_sound("select")
+			_spawn_burst(active_core["position"] + Vector3(0, 0.5, 0), Color("#FFD166"), 0.8)
+			power_cell_index += 1
+			if power_cell_index < data_cores.size():
+				_show_objective_banner("Route Step Locked", "Cell %d/%d restored. The next amber cell is now active." % [power_cell_index, data_cores.size()], Color("#FFD166"))
+			_refresh_power_cell_targets()
+			break
+	var next_step: int = min(power_cell_index + 1, data_cores.size())
+	mission_status = "Power cell route: step %d/%d. Follow the only bright amber cell." % [next_step, data_cores.size()]
+	if power_cell_index >= data_cores.size():
+		_complete_mission("Emergency power restored. Reach both override terminals.")
 
 func _update_extraction_mission(delta: float) -> void:
 	var arrived_count := 0
@@ -2191,12 +2651,12 @@ func _update_extraction_mission(delta: float) -> void:
 	else:
 		drone["charge"] = max(0.0, float(drone["charge"]) - delta * 0.4)
 	drone["node"].scale = Vector3.ONE * (1.0 + float(drone["charge"]) * 0.12)
-	mission_status = "Prototype demo: %d/%d on pad" % [arrived_count, required]
+	mission_status = "Rescue beacon: %d/%d holding" % [arrived_count, required]
 	if arrived_count > 0 and story_toast_timer <= 0.0 and float(drone["charge"]) > 0.35:
-		_show_story_event("Prototype demo charging", "Hold the demo pad. Blockers cannot stop the share once the meter fills.")
+		_show_story_event("Lift signal locking", "Hold the beacon. The lift cannot dock until the signal reaches full strength.")
 	if arrived_count >= required and float(drone["charge"]) >= 1.0:
 		_award_all_joined("assists", 1)
-		_complete_mission("Prototype shipped.")
+		_complete_mission("Rescue lift locked. Survivors have a way out.")
 
 func _pad_has_player(pad: Dictionary) -> bool:
 	for player in _joined_players():
@@ -2227,7 +2687,7 @@ func _complete_mission(message: String) -> void:
 		_spawn_burst(completion_position + Vector3(0, 0.55, 0), Color("#73FBD3"), 1.35)
 	_spawn_phase_complete_wave(completion_position, Color("#73FBD3") if completed_index != 0 else Color("#FFD166"))
 	if mission_index >= MISSION_NAMES.size():
-		_finish_game(true, "Prototype shipped.")
+		_start_ending_cinematic("Extraction complete.")
 	else:
 		_start_intermission_scene(completed_name, message)
 
@@ -2238,14 +2698,15 @@ func _award_all_joined(field: String, amount: int) -> void:
 func _finish_game(success: bool, message: String) -> void:
 	if finished:
 		return
+	_hide_opening_cinematic()
 	finished = true
 	phase = "finished"
 	final_message = message
 	if success:
 		team_score += int(max(0.0, MAX_TIME_SECONDS - elapsed_seconds) * (14.0 + active_player_count * 4.0))
 		_play_sound("confirm")
-		_show_objective_banner("Prototype Shipped", "Result saved to Player Passport.", Color("#73FBD3"))
-		_show_phase_scene("Results Scene", "Prototype shipped. Result is being saved to Player Passport.", Color("#73FBD3"), 0.0, "squares")
+		_show_objective_banner("Extraction Complete", "Survivors are moving. Result saved to Player Passport.", Color("#73FBD3"))
+		_show_phase_scene("Results Scene", "Extraction complete. Result is being saved to Player Passport.", Color("#73FBD3"), 0.0, "squares")
 		_flash_screen(Color(0.25, 1.0, 0.78, 0.18), 0.45)
 	else:
 		_play_sound("error")
@@ -2339,6 +2800,63 @@ func _update_attract_camera(delta: float) -> void:
 	camera.position = camera.position.lerp(desired_position, min(1.0, delta * 2.4))
 	camera.look_at(camera_focus, Vector3.UP)
 
+func _update_opening_cinematic_camera(delta: float) -> void:
+	if not camera or OPENING_CINEMATIC_BEATS.is_empty():
+		return
+	var beat_index: int = int(clamp(cinematic_beat_index, 0, OPENING_CINEMATIC_BEATS.size() - 1))
+	var current_beat: Dictionary = OPENING_CINEMATIC_BEATS[beat_index]
+	var next_beat: Dictionary = OPENING_CINEMATIC_BEATS[min(beat_index + 1, OPENING_CINEMATIC_BEATS.size() - 1)]
+	var current_at := float(current_beat.get("at", 0.0))
+	var next_at := float(next_beat.get("at", BRIEFING_SECONDS))
+	var span: float = max(0.1, next_at - current_at)
+	var beat_t: float = clamp((cinematic_time - current_at) / span, 0.0, 1.0)
+	var eased: float = smoothstep(0.0, 1.0, beat_t)
+	var current_focus: Vector3 = current_beat.get("focus", Vector3.ZERO)
+	var next_focus: Vector3 = next_beat.get("focus", current_focus)
+	var current_camera: Vector3 = current_beat.get("camera", current_focus + Vector3(0.0, 3.0, 5.8))
+	var next_camera: Vector3 = next_beat.get("camera", current_camera)
+	var focus: Vector3 = current_focus.lerp(next_focus, eased)
+	var drift: Vector3 = Vector3(sin(cinematic_time * 0.72) * 0.16, sin(cinematic_time * 0.52) * 0.08, cos(cinematic_time * 0.62) * 0.18)
+	var desired_position: Vector3 = current_camera.lerp(next_camera, eased) + drift
+	desired_position = _safe_camera_position(desired_position, focus)
+	camera_focus = camera_focus.lerp(focus, min(1.0, delta * 2.35))
+	camera.position = camera.position.lerp(desired_position, min(1.0, delta * 1.75))
+	camera.look_at(camera_focus, Vector3.UP)
+
+func _update_stage_cinematic_camera(delta: float) -> void:
+	if not camera:
+		return
+	var focus := _stage_cinematic_focus(mission_index)
+	var orbit := cinematic_time * 0.52 + float(mission_index) * 0.9
+	var desired_position := focus + Vector3(cos(orbit) * 9.4, 4.8 + sin(orbit * 0.6) * 0.35, sin(orbit) * 8.2 + 3.4)
+	desired_position = _safe_camera_position(desired_position, focus)
+	camera_focus = camera_focus.lerp(focus, min(1.0, delta * 2.0))
+	camera.position = camera.position.lerp(desired_position, min(1.0, delta * 1.8))
+	camera.look_at(camera_focus, Vector3.UP)
+
+func _update_ending_cinematic_camera(delta: float) -> void:
+	if not camera:
+		return
+	var focus := Vector3(0.0, 1.3, -8.6)
+	if not drone.is_empty() and drone.has("position"):
+		var drone_position: Vector3 = drone["position"]
+		focus = drone_position + Vector3(0.0, 1.2, 0.0)
+	var orbit := cinematic_time * 0.42
+	var desired_position := focus + Vector3(cos(orbit) * 7.8, 5.4, 7.8 + sin(orbit) * 2.4)
+	desired_position = _safe_camera_position(desired_position, focus)
+	camera_focus = camera_focus.lerp(focus, min(1.0, delta * 1.8))
+	camera.position = camera.position.lerp(desired_position, min(1.0, delta * 1.55))
+	camera.look_at(camera_focus, Vector3.UP)
+
+func _stage_cinematic_focus(index: int) -> Vector3:
+	match clamp(index, 0, MISSION_NAMES.size() - 1):
+		1:
+			return Vector3(0.0, 1.25, -2.6)
+		2:
+			return Vector3(0.0, 1.25, -6.4)
+		_:
+			return Vector3(0.0, 1.25, 1.0)
+
 func _update_camera(delta: float) -> void:
 	if not camera:
 		return
@@ -2372,16 +2890,16 @@ func _update_camera(delta: float) -> void:
 		var speed_ratio: float = clamp(velocity.length() / PLAYER_SPEED, 0.0, 1.0)
 		var desired_focus: Vector3 = player["position"] + camera_heading * (0.95 + speed_ratio * 0.45) + Vector3(0, 1.05, 0)
 		camera_focus = camera_focus.lerp(desired_focus, min(1.0, delta * 5.0))
-		desired_position = camera_focus - camera_heading * 6.9 + Vector3(0, 2.55, 0)
+		desired_position = camera_focus - camera_heading * 7.8 + Vector3(0, 3.05, 0)
 	else:
 		if average_velocity.length() > 0.25:
 			var group_heading := Vector3(average_velocity.x, 0.0, average_velocity.z).normalized()
 			camera_heading = camera_heading.lerp(group_heading, min(1.0, delta * 1.6)).normalized()
 		var group_focus := target + camera_heading * 0.45 + Vector3(0, 1.08, 0)
 		camera_focus = camera_focus.lerp(group_focus, min(1.0, delta * 4.2))
-		var camera_distance: float = clamp(7.2 + spread * 0.62, 7.2, 10.4)
-		var camera_height: float = clamp(2.9 + spread * 0.2, 2.9, 4.6)
-		var side_offset: Vector3 = Vector3(camera_heading.z, 0.0, -camera_heading.x) * clamp(1.0 + spread * 0.14, 1.0, 1.8)
+		var camera_distance: float = clamp(8.2 + spread * 0.72, 8.2, 13.0)
+		var camera_height: float = clamp(3.3 + spread * 0.25, 3.3, 5.6)
+		var side_offset: Vector3 = Vector3(camera_heading.z, 0.0, -camera_heading.x) * clamp(1.1 + spread * 0.16, 1.1, 2.2)
 		desired_position = camera_focus - camera_heading * camera_distance + side_offset + Vector3(0, camera_height, 0)
 
 	desired_position = _safe_camera_position(desired_position, camera_focus)
@@ -2392,24 +2910,24 @@ func _safe_camera_position(desired_position: Vector3, focus: Vector3) -> Vector3
 	var safe := desired_position
 	safe.x = clamp(safe.x, ARENA_RECT.position.x + 1.15, ARENA_RECT.end.x - 1.15)
 	safe.z = clamp(safe.z, ARENA_RECT.position.y + 1.15, ARENA_RECT.end.y - 1.15)
-	safe.y = clamp(safe.y, 2.15, 4.8)
+	safe.y = clamp(safe.y, 2.3, 6.8)
 	if not _collides_with_static(Vector3(safe.x, 0.0, safe.z), 0.45):
 		return safe
 	var candidates := [
-		focus + Vector3(0.0, 2.8, 5.6),
-		focus + Vector3(2.6, 2.8, 5.1),
-		focus + Vector3(-2.6, 2.8, 5.1),
-		focus + Vector3(0.0, 3.4, 3.6),
-		focus + Vector3(0.0, 2.8, -5.1)
+		focus + Vector3(0.0, 3.2, 7.2),
+		focus + Vector3(3.6, 3.2, 6.6),
+		focus + Vector3(-3.6, 3.2, 6.6),
+		focus + Vector3(0.0, 4.2, 4.6),
+		focus + Vector3(0.0, 3.2, -6.6)
 	]
 	for candidate in candidates:
 		var fallback: Vector3 = candidate
 		fallback.x = clamp(fallback.x, ARENA_RECT.position.x + 1.15, ARENA_RECT.end.x - 1.15)
 		fallback.z = clamp(fallback.z, ARENA_RECT.position.y + 1.15, ARENA_RECT.end.y - 1.15)
-		fallback.y = clamp(fallback.y, 2.25, 4.8)
+		fallback.y = clamp(fallback.y, 2.35, 6.8)
 		if not _collides_with_static(Vector3(fallback.x, 0.0, fallback.z), 0.45):
 			return fallback
-	return Vector3(focus.x, clamp(focus.y + 3.2, 2.6, 4.6), focus.z + 5.2)
+	return Vector3(focus.x, clamp(focus.y + 3.8, 2.8, 6.4), focus.z + 6.8)
 
 func _animate_scene(_delta: float) -> void:
 	var time := Time.get_ticks_msec() / 1000.0
@@ -2479,6 +2997,8 @@ func _create_hud() -> void:
 	result_label.size = Vector2(580, 170)
 	result_label.visible = false
 	_create_storyboard_hud()
+	_create_cinematic_hud()
+	_create_join_overlay_hud()
 
 func _make_label(position: Vector2, font_size: int, color: Color) -> Label:
 	var label := Label.new()
@@ -2509,7 +3029,7 @@ func _create_storyboard_hud() -> void:
 	storyboard_stack.add_child(storyboard_title_label)
 
 	storyboard_route_label = _make_story_label(13, Color("#73FBD3"))
-	storyboard_route_label.text = "Route locks after countdown."
+	storyboard_route_label.text = "Deployment starts after countdown."
 	storyboard_route_label.custom_minimum_size = Vector2(348, 48)
 	storyboard_stack.add_child(storyboard_route_label)
 
@@ -2579,6 +3099,75 @@ func _create_storyboard_hud() -> void:
 	objective_banner_title_label.text = ""
 	objective_banner_body_label.text = ""
 
+func _create_cinematic_hud() -> void:
+	cinematic_letterbox_top = ColorRect.new()
+	cinematic_letterbox_top.name = "OpeningLetterboxTop"
+	cinematic_letterbox_top.position = Vector2(0, 0)
+	cinematic_letterbox_top.size = Vector2(1280, 76)
+	cinematic_letterbox_top.color = Color(0.0, 0.0, 0.0, 0.82)
+	cinematic_letterbox_top.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cinematic_letterbox_top.visible = false
+	hud_layer.add_child(cinematic_letterbox_top)
+
+	cinematic_letterbox_bottom = ColorRect.new()
+	cinematic_letterbox_bottom.name = "OpeningLetterboxBottom"
+	cinematic_letterbox_bottom.position = Vector2(0, 636)
+	cinematic_letterbox_bottom.size = Vector2(1280, 84)
+	cinematic_letterbox_bottom.color = Color(0.0, 0.0, 0.0, 0.82)
+	cinematic_letterbox_bottom.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cinematic_letterbox_bottom.visible = false
+	hud_layer.add_child(cinematic_letterbox_bottom)
+
+	cinematic_panel = PanelContainer.new()
+	cinematic_panel.name = "OpeningCinematicPanel"
+	cinematic_panel.position = Vector2(142, 434)
+	cinematic_panel.size = Vector2(996, 164)
+	cinematic_panel.custom_minimum_size = Vector2(996, 164)
+	cinematic_panel.visible = false
+	cinematic_panel.add_theme_stylebox_override("panel", _make_panel_style(Color(0.02, 0.04, 0.08, 0.9), Color("#73FBD3")))
+	hud_layer.add_child(cinematic_panel)
+
+	cinematic_title_label = _make_label(Vector2(172, 454), 25, Color("#73FBD3"))
+	cinematic_title_label.size = Vector2(936, 34)
+	cinematic_title_label.visible = false
+	cinematic_body_label = _make_label(Vector2(172, 496), 17, Color("#F7FBFF"))
+	cinematic_body_label.size = Vector2(936, 58)
+	cinematic_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	cinematic_body_label.visible = false
+	cinematic_prompt_label = _make_label(Vector2(172, 562), 13, Color("#B8C3D9"))
+	cinematic_prompt_label.size = Vector2(936, 24)
+	cinematic_prompt_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	cinematic_prompt_label.visible = false
+
+func _create_join_overlay_hud() -> void:
+	join_overlay_panel = PanelContainer.new()
+	join_overlay_panel.name = "JoinCountdownOverlay"
+	join_overlay_panel.position = Vector2(312, 132)
+	join_overlay_panel.size = Vector2(656, 388)
+	join_overlay_panel.custom_minimum_size = Vector2(656, 388)
+	join_overlay_panel.visible = false
+	join_overlay_panel.add_theme_stylebox_override("panel", _make_panel_style(Color(0.01, 0.03, 0.07, 0.93), Color("#73FBD3")))
+	hud_layer.add_child(join_overlay_panel)
+
+	join_overlay_title_label = _make_label(Vector2(348, 156), 28, Color("#F7FBFF"))
+	join_overlay_title_label.size = Vector2(584, 42)
+	join_overlay_title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	join_overlay_title_label.visible = false
+	join_overlay_countdown_label = _make_label(Vector2(348, 204), 78, Color("#FFD166"))
+	join_overlay_countdown_label.size = Vector2(584, 98)
+	join_overlay_countdown_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	join_overlay_countdown_label.visible = false
+	join_overlay_slots_label = _make_label(Vector2(360, 318), 18, Color("#F7FBFF"))
+	join_overlay_slots_label.size = Vector2(560, 88)
+	join_overlay_slots_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	join_overlay_slots_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	join_overlay_slots_label.visible = false
+	join_overlay_mode_label = _make_label(Vector2(360, 428), 16, Color("#73FBD3"))
+	join_overlay_mode_label.size = Vector2(560, 46)
+	join_overlay_mode_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	join_overlay_mode_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	join_overlay_mode_label.visible = false
+
 func _make_story_label(font_size: int, color: Color) -> Label:
 	var label := Label.new()
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -2607,14 +3196,14 @@ func _update_hud() -> void:
 	if phase == "attract":
 		countdown_label.text = "Attract demo"
 		mission_label.text = "Move or fire to start"
-		status_label.text = "The station is running a playable route preview."
+		status_label.text = "The station is replaying the Deck 7 rescue path."
 	elif phase == "join":
-		countdown_label.text = "Join window: %02d" % int(ceil(join_remaining))
-		mission_label.text = "P1 ready. P2 press Enter to join."
-		status_label.text = "Generate sparks, frame the route, share the prototype."
+		countdown_label.text = "Deploying in %02d" % int(ceil(join_remaining))
+		mission_label.text = "Operator slots"
+		status_label.text = "P1 is ready. P2 can press Enter. Passport status is shown in the center overlay."
 	elif phase == "briefing":
-		countdown_label.text = "Briefing: %02d" % int(ceil(scene_timer))
-		mission_label.text = _story_title_for_index(0)
+		countdown_label.text = "Opening cinematic: %02d" % int(ceil(scene_timer))
+		mission_label.text = "Deck 7 lockdown briefing"
 		status_label.text = mission_status
 	elif phase == "play":
 		if threat_grace_remaining > 0.0:
@@ -2628,6 +3217,10 @@ func _update_hud() -> void:
 		countdown_label.text = "Scene shift"
 		mission_label.text = _story_title_for_index(mission_index)
 		status_label.text = mission_status
+	elif phase == "ending":
+		countdown_label.text = "Ending cinematic"
+		mission_label.text = "Extraction locked"
+		status_label.text = mission_status
 	else:
 		countdown_label.text = "Run complete"
 		mission_label.text = ""
@@ -2636,33 +3229,78 @@ func _update_hud() -> void:
 	timer_label.text = "Time %03d" % max(0, int(ceil(MAX_TIME_SECONDS - elapsed_seconds)))
 	p1_label.text = _player_hud(players[0]) if players.size() > 0 else ""
 	p2_label.text = _player_hud(players[1]) if players.size() > 1 else ""
-	controls_label.text = "P1 WASD+E fire    P2 Arrows+Enter fire    R Restart"
+	if phase == "briefing":
+		controls_label.text = "Move/fire skips after intro    R Restart"
+	elif phase == "intermission" or phase == "ending":
+		controls_label.text = "Cinematic playing    R Restart"
+	else:
+		controls_label.text = "P1 WASD+E fire    P2 Arrows+Enter fire    R Restart"
 	if finished:
 		result_label.text = "%s\nTeam Score %s" % [final_message, _format_score(team_score)]
+	_update_join_overlay_hud()
 	_update_storyboard_hud()
+
+func _update_join_overlay_hud() -> void:
+	var is_visible := phase == "join"
+	var controls := [
+		join_overlay_panel,
+		join_overlay_title_label,
+		join_overlay_countdown_label,
+		join_overlay_slots_label,
+		join_overlay_mode_label
+	]
+	for control in controls:
+		if control:
+			control.visible = is_visible
+	if not is_visible:
+		return
+	join_overlay_title_label.text = "DEPLOYMENT STARTS IN"
+	join_overlay_countdown_label.add_theme_color_override("font_color", Color("#FF5A6A") if join_remaining <= 3.0 else Color("#FFD166"))
+	join_overlay_countdown_label.text = "%02d" % int(ceil(join_remaining))
+	join_overlay_slots_label.text = "%s\n%s" % [
+		_join_slot_summary(0),
+		_join_slot_summary(1)
+	]
+	join_overlay_mode_label.text = "%s  |  COUNTDOWN LAUNCHES AUTOMATICALLY AT ZERO" % ("DUO READY" if _joined_players().size() > 1 else "SOLO READY")
+
+func _join_slot_summary(index: int) -> String:
+	if index >= players.size():
+		return "P%d unavailable" % (index + 1)
+	var player: Dictionary = players[index]
+	var slot := String(player.get("slot", "P%d" % (index + 1)))
+	if not bool(player.get("joined", false)):
+		return "%s WAITING  -  PRESS %s  -  %s" % [slot, "ENTER" if slot == "P2" else "START", _identity_mode_label(player).to_upper()]
+	return "%s READY  -  %s  -  %s" % [slot, String(player.get("displayName", slot)).to_upper(), _identity_mode_label(player).to_upper()]
+
+func _identity_mode_label(player: Dictionary) -> String:
+	if bool(player.get("isGuest", true)) or String(player.get("playerId", "guest")) == "guest":
+		return "Guest Mode"
+	return "Nexus Passport"
 
 func _update_storyboard_hud() -> void:
 	if not storyboard_panel:
 		return
 	if phase == "attract":
-		storyboard_route_label.text = "Demo loop\nMove or fire to start."
+		storyboard_route_label.text = "Preview loop\nMove or fire to start."
 	elif phase == "join":
-		storyboard_route_label.text = "Join window\nP2 can press Enter before launch."
+		storyboard_route_label.text = "Join window\nP2 can press Enter before deployment."
 	elif phase == "briefing":
 		storyboard_route_label.text = "Briefing\n%s" % _objective_instruction_for_index(0)
 	elif phase == "play":
 		storyboard_route_label.text = "%s\n%s" % [_objective_progress_text(), _objective_instruction_for_index(mission_index)]
 	elif phase == "intermission":
 		storyboard_route_label.text = "Next phase\n%s" % _objective_instruction_for_index(mission_index)
+	elif phase == "ending":
+		storyboard_route_label.text = "Extraction cinematic\nLift is docking."
 	else:
-		storyboard_route_label.text = "Run complete\nResult saved to Player Passport."
+		storyboard_route_label.text = "Extraction complete\nResult saved to Player Passport."
 
 	for index in range(storyboard_step_labels.size()):
 		var label := storyboard_step_labels[index]
 		var story: Dictionary = MISSION_STORY[index]
 		var prefix := "-"
 		var color := Color("#B8C3D9")
-		if phase == "finished" or index < mission_index:
+		if phase == "finished" or phase == "ending" or index < mission_index:
 			prefix = "DONE"
 			color = Color("#73FBD3")
 		elif (phase == "play" or phase == "intermission") and index == mission_index:
@@ -2681,33 +3319,29 @@ func _update_storyboard_hud() -> void:
 func _objective_instruction_for_index(index: int) -> String:
 	match clamp(index, 0, MISSION_STORY.size() - 1):
 		0:
-			return "Collect every spark. Use walls to break seeker line of sight."
+			return "Collect only the bright amber cell. The next route step appears after each pickup."
 		1:
-			return "Reach both principle gates. Either player can frame a gate."
+			return "Reach Alpha, then Omega. Maze walls break seeker line of sight."
 		2:
-			return "Hold the demo pad until the share meter fills."
+			return "Hold the rescue beacon until the lift signal reaches full strength."
 	return ""
 
 func _objective_progress_text() -> String:
 	if phase != "play":
-		return "Route: %s" % ("Duo" if active_player_count > 1 else "Solo")
+		return "Rescue team: %s" % ("Duo" if active_player_count > 1 else "Solo")
 	match mission_index:
 		0:
-			var remaining := 0
-			for core in data_cores:
-				if not bool(core.get("collected", false)):
-					remaining += 1
 			var total: int = max(data_cores.size(), 1)
-			return "Sparks: %d/%d" % [total - remaining, total]
+			return "Route step: %d/%d" % [min(power_cell_index + 1, total), total]
 		1:
-			var framed := 0
+			var active_overrides := 0
 			for pad in relay_pads:
 				if bool(pad.get("complete", false)):
-					framed += 1
+					active_overrides += 1
 			var total_gates: int = max(relay_pads.size(), 1)
-			return "Gates: %d/%d" % [framed, total_gates]
+			return "Overrides: %d/%d" % [active_overrides, total_gates]
 		2:
-			return "Demo share: %d%%" % int(round(float(drone.get("charge", 0.0)) * 100.0))
+			return "Lift signal: %d%%" % int(round(float(drone.get("charge", 0.0)) * 100.0))
 	return "Objective complete"
 
 func _show_phase_scene(title: String, body: String, color: Color, duration: float, pattern: String = "fade") -> void:
@@ -2937,9 +3571,9 @@ func _story_brief_for_index(index: int) -> String:
 
 func _player_hud(player: Dictionary) -> String:
 	if not bool(player["joined"]):
-		return "%s waiting" % player["slot"]
+		return "%s waiting  %s" % [player["slot"], _identity_mode_label(player)]
 	var weapon_text := "ready" if float(player.get("weaponCooldown", 0.0)) <= 0.0 else "charging"
-	return "%s %s  Energy %d  Pulse %s" % [player["slot"], player["displayName"], int(player["energy"]), weapon_text]
+	return "%s %s  %s  Energy %d  Pulse %s" % [player["slot"], player["displayName"], _identity_mode_label(player), int(player["energy"]), weapon_text]
 
 func _demo_launch_payload() -> Dictionary:
 	return {
@@ -3105,6 +3739,8 @@ func _nearest_living_player(position: Vector3, max_distance: float) -> Dictionar
 			continue
 		var distance := _flat_distance(position, player["position"])
 		if distance < nearest_distance:
+			if _line_blocked_by_static(position, player["position"], 0.18):
+				continue
 			nearest_distance = distance
 			nearest = player
 	return nearest
@@ -3123,6 +3759,20 @@ func _steer_around_blockers(position: Vector3, direction: Vector2, radius: float
 	return Vector2.ZERO
 
 func _resolve_sentry_motion(previous_position: Vector3, velocity: Vector2, radius: float, delta: float) -> Dictionary:
+	var total_motion := Vector3(velocity.x, 0.0, velocity.y) * delta
+	var steps: int = max(1, int(ceil(total_motion.length() / 0.3)))
+	if steps > 1:
+		var current := previous_position
+		var adjusted := velocity
+		var step_delta := delta / float(steps)
+		for _step in range(steps):
+			var result := _resolve_sentry_motion_step(current, adjusted, radius, step_delta)
+			current = result["position"]
+			adjusted = result["velocity"]
+		return { "position": current, "velocity": adjusted }
+	return _resolve_sentry_motion_step(previous_position, velocity, radius, delta)
+
+func _resolve_sentry_motion_step(previous_position: Vector3, velocity: Vector2, radius: float, delta: float) -> Dictionary:
 	var resolved := previous_position
 	var adjusted_velocity := velocity
 
@@ -3154,6 +3804,20 @@ func _resolve_sentry_motion(previous_position: Vector3, velocity: Vector2, radiu
 	return { "position": resolved, "velocity": adjusted_velocity }
 
 func _resolve_player_motion(previous_position: Vector3, desired_position: Vector3, velocity: Vector3) -> Dictionary:
+	var total_motion := desired_position - previous_position
+	var steps: int = max(1, int(ceil(total_motion.length() / 0.32)))
+	if steps > 1:
+		var current := previous_position
+		var adjusted := velocity
+		var step_motion := total_motion / float(steps)
+		for _step in range(steps):
+			var result := _resolve_player_motion_step(current, current + step_motion, adjusted)
+			current = result["position"]
+			adjusted = result["velocity"]
+		return { "position": current, "velocity": adjusted }
+	return _resolve_player_motion_step(previous_position, desired_position, velocity)
+
+func _resolve_player_motion_step(previous_position: Vector3, desired_position: Vector3, velocity: Vector3) -> Dictionary:
 	var resolved := previous_position
 	var adjusted_velocity := velocity
 

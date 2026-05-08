@@ -112,6 +112,9 @@ if (-not (Test-Path -LiteralPath $characterExtract)) {
 $godotStoreDir = Join-Path $downloadDir "godot-store"
 New-Item -ItemType Directory -Force -Path $godotStoreDir | Out-Null
 
+$godotLibraryDir = Join-Path $downloadDir "godot-library"
+New-Item -ItemType Directory -Force -Path $godotLibraryDir | Out-Null
+
 $quaterniusAnimationArchive = Join-Path $godotStoreDir "Universal_Animation_LibraryStandard.zip"
 $quaterniusAnimationExtract = Join-Path $godotStoreDir "Universal_Animation_LibraryStandard"
 if ($Force -or -not (Test-Path -LiteralPath $quaterniusAnimationArchive)) {
@@ -170,6 +173,46 @@ if (-not (Test-Path -LiteralPath $sceneManagerExtract)) {
 }
 if ($Force -or -not (Test-Path -LiteralPath $sceneManagerLicense)) {
   Invoke-WebRequest -Uri "https://raw.githubusercontent.com/glass-brick/Scene-Manager/main/LICENSE" -OutFile $sceneManagerLicense -MaximumRedirection 5
+}
+
+$megaKitArchive = Join-Path $godotStoreDir "quaternius_modular_sci_fi_megakit_standard.zip"
+$megaKitExtract = Join-Path $godotStoreDir "quaternius_modular_sci_fi_megakit_standard"
+if ($Force -or -not (Test-Path -LiteralPath $megaKitArchive)) {
+  Write-Host "Downloading Quaternius Modular Sci-Fi MegaKit Standard"
+  Invoke-WebRequest -Uri "https://store.godotengine.org/asset/quaternius/modular-sci-fi-megakit/download/143/" -OutFile $megaKitArchive -MaximumRedirection 5
+}
+if ($Force -and (Test-Path -LiteralPath $megaKitExtract)) {
+  Remove-Item -LiteralPath $megaKitExtract -Recurse -Force
+}
+if (-not (Test-Path -LiteralPath $megaKitExtract)) {
+  New-Item -ItemType Directory -Force -Path $megaKitExtract | Out-Null
+  Expand-Archive -LiteralPath $megaKitArchive -DestinationPath $megaKitExtract -Force
+}
+$megaKitRoot = Get-ChildItem -LiteralPath $megaKitExtract -Directory | Where-Object { $_.Name -like "Modular SciFi MegaKit*" } | Select-Object -First 1
+if (-not $megaKitRoot) {
+  throw "Missing Quaternius Modular Sci-Fi MegaKit extracted root under $megaKitExtract"
+}
+
+$kayKitArchive = Join-Path $godotLibraryDir "kaykit_space_base_bits.zip"
+$kayKitExtract = Join-Path $godotLibraryDir "kaykit_space_base_bits"
+if ($Force -or -not (Test-Path -LiteralPath $kayKitArchive)) {
+  Write-Host "Downloading KayKit Space Base Bits"
+  Invoke-WebRequest -Uri "https://github.com/KayKit-Game-Assets/KayKit-Space-Base-Bits-1.0/archive/6dfbcac9927d06283752c4defd4882cfe0d29666.zip" -OutFile $kayKitArchive -MaximumRedirection 5
+}
+if ($Force -and (Test-Path -LiteralPath $kayKitExtract)) {
+  Remove-Item -LiteralPath $kayKitExtract -Recurse -Force
+}
+if (-not (Test-Path -LiteralPath $kayKitExtract)) {
+  New-Item -ItemType Directory -Force -Path $kayKitExtract | Out-Null
+  Expand-Archive -LiteralPath $kayKitArchive -DestinationPath $kayKitExtract -Force
+}
+$kayKitRoot = Get-ChildItem -LiteralPath $kayKitExtract -Directory | Select-Object -First 1
+if (-not $kayKitRoot) {
+  throw "Missing KayKit Space Base Bits extracted root under $kayKitExtract"
+}
+$kayKitGltfRoot = Join-Path $kayKitRoot.FullName "addons\kaykit_space_base_bits\Assets\gltf"
+if (-not (Test-Path -LiteralPath $kayKitGltfRoot)) {
+  throw "Missing KayKit glTF root: $kayKitGltfRoot"
 }
 
 $quaterniusArchive = Join-Path $downloadDir "ultimate_space_kit-glb.zip"
@@ -239,6 +282,24 @@ function Copy-ProjectDirectory {
   Copy-Item -LiteralPath $source -Destination $target -Recurse -Force
 }
 
+function Merge-ProjectDirectory {
+  param(
+    [Parameter(Mandatory = $true)][string]$SourceRelative,
+    [Parameter(Mandatory = $true)][string]$TargetRelative
+  )
+
+  $source = Join-Path $downloadDir $SourceRelative
+  $target = Join-Path $projectRoot $TargetRelative
+  if (-not (Test-Path -LiteralPath $source)) {
+    throw "Missing source project directory: $source"
+  }
+
+  New-Item -ItemType Directory -Force -Path $target | Out-Null
+  Get-ChildItem -LiteralPath $source -Force | ForEach-Object {
+    Copy-Item -LiteralPath $_.FullName -Destination $target -Recurse -Force
+  }
+}
+
 function Copy-AmbientMap {
   param(
     [Parameter(Mandatory = $true)][string]$AssetId,
@@ -268,6 +329,58 @@ function Copy-QuaterniusModel {
   $targetDir = Join-Path $assetRoot "quaternius\ultimate-space-kit\models"
   New-Item -ItemType Directory -Force -Path $targetDir | Out-Null
   Copy-Item -LiteralPath $source -Destination (Join-Path $targetDir $FileName) -Force
+}
+
+function Copy-ExternalAsset {
+  param(
+    [Parameter(Mandatory = $true)][string]$SourceRoot,
+    [Parameter(Mandatory = $true)][string]$SourceRelative,
+    [Parameter(Mandatory = $true)][string]$TargetRelative
+  )
+
+  $source = Join-Path $SourceRoot $SourceRelative
+  $target = Join-Path $assetRoot $TargetRelative
+  if (-not (Test-Path -LiteralPath $source)) {
+    throw "Missing external source asset: $source"
+  }
+
+  New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
+  Copy-Item -LiteralPath $source -Destination $target -Force
+}
+
+function Copy-MegaKitModel {
+  param(
+    [Parameter(Mandatory = $true)][string]$SourceCategory,
+    [Parameter(Mandatory = $true)][string]$TargetCategory,
+    [Parameter(Mandatory = $true)][string]$FileBase
+  )
+
+  Copy-ExternalAsset $megaKitRoot.FullName "glTF\$SourceCategory\$FileBase.gltf" "quaternius\modular-sci-fi-megakit\$TargetCategory\$FileBase.gltf"
+  Copy-ExternalAsset $megaKitRoot.FullName "glTF\$SourceCategory\$FileBase.bin" "quaternius\modular-sci-fi-megakit\$TargetCategory\$FileBase.bin"
+}
+
+function Copy-KayKitModel {
+  param(
+    [Parameter(Mandatory = $true)][string]$FileBase
+  )
+
+  Copy-ExternalAsset $kayKitGltfRoot "$FileBase.gltf" "kaykit\space-base-bits\models\$FileBase.gltf"
+  Copy-ExternalAsset $kayKitGltfRoot "$FileBase.bin" "kaykit\space-base-bits\models\$FileBase.bin"
+}
+
+function Rewrite-MegaKitTextureUris {
+  param(
+    [Parameter(Mandatory = $true)][string]$Category
+  )
+
+  $categoryDir = Join-Path $assetRoot "quaternius\modular-sci-fi-megakit\$Category"
+  Get-ChildItem -LiteralPath $categoryDir -File -Filter "*.gltf" | ForEach-Object {
+    $content = Get-Content -LiteralPath $_.FullName -Raw
+    $updated = $content -replace '"uri":"(T_[^"]+\.png)"', '"uri":"../textures/$1"'
+    if ($updated -ne $content) {
+      Set-Content -LiteralPath $_.FullName -Value $updated -Encoding UTF8 -NoNewline
+    }
+  }
 }
 
 1..24 | ForEach-Object {
@@ -318,8 +431,15 @@ Copy-Asset "kenney_animated-characters-protagonists\Model\characterMedium.fbx" "
 
 Copy-Asset "godot-store\tomality_LOOPS\LOOPS\SPINNER\Spinner LOOP 1.ogg" "music\tomality\spinner_loop_1.ogg"
 Copy-Asset "godot-store\tomality_LOOPS\LOOPS\OVERTIME\Overtime LOOP 2.ogg" "music\tomality\overtime_loop_2.ogg"
-Copy-ProjectDirectory "godot-store\godot-ai-plugin-4\addons\godot_ai" "addons\godot_ai"
-Copy-ProjectDirectory "godot-store\Scene-Manager-1.2.0-source\Scene-Manager-1.2.0\addons\scene_manager" "addons\scene_manager"
+Merge-ProjectDirectory "godot-store\godot-ai-plugin-4\addons\godot_ai" "addons\godot_ai"
+Merge-ProjectDirectory "godot-store\Scene-Manager-1.2.0-source\Scene-Manager-1.2.0\addons\scene_manager" "addons\scene_manager"
+
+$sceneManagerRuntime = Join-Path $projectRoot "addons\scene_manager\SceneManager.gd"
+$sceneManagerSource = Get-Content -LiteralPath $sceneManagerRuntime -Raw
+if ($sceneManagerSource -notmatch "if not `_current_scene") {
+  $sceneManagerSource = $sceneManagerSource -replace "func _set_singleton_entities\(\) -> void:\r?\n\tsingleton_entities = \{\}", "func _set_singleton_entities() -> void:`r`n`tsingleton_entities = {}`r`n`tif not _current_scene:`r`n`t`treturn"
+  Set-Content -LiteralPath $sceneManagerRuntime -Value $sceneManagerSource -Encoding UTF8 -NoNewline
+}
 
 foreach ($assetId in $ambientAssets) {
   @("Color", "NormalGL", "Roughness", "Metalness", "AmbientOcclusion") | ForEach-Object {
@@ -355,6 +475,90 @@ foreach ($assetId in $ambientAssets) {
   Copy-QuaterniusModel $_
 }
 
+$megaKitTargetRoot = Join-Path $assetRoot "quaternius\modular-sci-fi-megakit"
+if (Test-Path -LiteralPath $megaKitTargetRoot) {
+  Remove-Item -LiteralPath $megaKitTargetRoot -Recurse -Force
+}
+New-Item -ItemType Directory -Force -Path $megaKitTargetRoot | Out-Null
+
+$megaKitTextureSource = Join-Path $megaKitRoot.FullName "Textures"
+$megaKitTextureTarget = Join-Path $megaKitTargetRoot "textures"
+New-Item -ItemType Directory -Force -Path $megaKitTextureTarget | Out-Null
+Get-ChildItem -LiteralPath $megaKitTextureSource -File -Filter "*.png" | ForEach-Object {
+  Copy-Item -LiteralPath $_.FullName -Destination (Join-Path $megaKitTextureTarget $_.Name) -Force
+}
+
+@("Alien_Cyclop", "Alien_Oculichrysalis", "Alien_Scolitex") | ForEach-Object {
+  Copy-MegaKitModel "Aliens" "aliens" $_
+}
+@("Column_Astra", "Column_Large_Straight", "Column_Pipes", "Column_Round") | ForEach-Object {
+  Copy-MegaKitModel "Columns" "columns" $_
+}
+@(
+  "Door_DarkMetal",
+  "Door_Frame_Square",
+  "Door_Frame_Square_Blocked",
+  "Door_Metal",
+  "Platform_3Plates",
+  "Platform_Metal",
+  "Platform_Rails_4Wide",
+  "Platform_Ramp_4Wide",
+  "Platform_Squares"
+) | ForEach-Object {
+  Copy-MegaKitModel "Platforms" "platforms" $_
+}
+@(
+  "Prop_AccessPoint",
+  "Prop_Barrel_Large",
+  "Prop_Computer",
+  "Prop_Crate3",
+  "Prop_Crate4",
+  "Prop_Light_Floor",
+  "Prop_Light_Wide",
+  "Prop_Rail_4",
+  "Prop_Vent_Wide"
+) | ForEach-Object {
+  Copy-MegaKitModel "Props" "props" $_
+}
+@(
+  "ShortWall_MetalPlates_Straight",
+  "TopWindow_Straight",
+  "WallAstra_Straight",
+  "WallAstra_Straight_Divided",
+  "WallAstra_Straight_Window",
+  "WallWindow_Straight"
+) | ForEach-Object {
+  Copy-MegaKitModel "Walls" "walls" $_
+}
+@("aliens", "columns", "platforms", "props", "walls") | ForEach-Object {
+  Rewrite-MegaKitTextureUris $_
+}
+
+$kayKitTargetRoot = Join-Path $assetRoot "kaykit\space-base-bits\models"
+if (Test-Path -LiteralPath $kayKitTargetRoot) {
+  Remove-Item -LiteralPath $kayKitTargetRoot -Recurse -Force
+}
+New-Item -ItemType Directory -Force -Path $kayKitTargetRoot | Out-Null
+@(
+  "basemodule_A",
+  "basemodule_B",
+  "basemodule_C",
+  "cargodepot_A",
+  "containers_A",
+  "containers_D",
+  "landingpad_large",
+  "lights",
+  "solarpanel",
+  "spacetruck",
+  "spacetruck_large",
+  "structure_tall",
+  "tunnel_diagonal_long_A",
+  "tunnel_straight_A"
+) | ForEach-Object {
+  Copy-KayKitModel $_
+}
+Copy-ExternalAsset $kayKitGltfRoot "spacebits_texture.png" "kaykit\space-base-bits\models\spacebits_texture.png"
+
 Copy-Asset "kenney_rtssci-fi\License.txt" "licenses\kenney_sci-fi-rts_LICENSE.txt"
 Copy-Asset "SpaceShooterRedux\license.txt" "licenses\kenney_space-shooter-redux_LICENSE.txt"
 Copy-Asset "kenney_interface-sounds\License.txt" "licenses\kenney_interface-sounds_LICENSE.txt"
@@ -364,6 +568,8 @@ Copy-Asset "godot-store\tomality_LOOPS\LOOPS\LICENSE.txt" "licenses\tomality-fre
 Copy-Asset "godot-store\Universal_Animation_LibraryStandard\Animation Library[Standard]\License.txt" "licenses\quaternius_universal-animation-library_LICENSE.txt"
 Copy-Asset "godot-store\godot-ai-plugin-4\addons\godot_ai\LICENSE" "licenses\godot-ai-plugin_LICENSE.txt"
 Copy-Asset "godot-store\scene-manager_LICENSE.txt" "licenses\scene-manager_LICENSE.txt"
+Copy-ExternalAsset $megaKitRoot.FullName "License_Standard.txt" "licenses\quaternius_modular-sci-fi-megakit_LICENSE.txt"
+Copy-ExternalAsset (Join-Path $kayKitRoot.FullName "addons\kaykit_space_base_bits\Assets") "LICENSE.txt" "licenses\kaykit_space-base-bits_LICENSE.txt"
 
 $licenseDir = Join-Path $assetRoot "licenses"
 New-Item -ItemType Directory -Force -Path $licenseDir | Out-Null

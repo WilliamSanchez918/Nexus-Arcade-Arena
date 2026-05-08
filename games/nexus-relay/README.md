@@ -22,7 +22,7 @@ For normal development, the Hub can launch this source project directly if Godot
 
 ## Assets And Generation
 
-Runtime assets live in `assets/kenney`, `assets/quaternius`, `assets/ambientcg`, and `assets/music`; all copied packs are documented by `assets/manifest/nexus_relay_assets.json`. The repo keeps only the curated 3D modules, skinned operator FBX, GLB props, PBR textures, sprites, sounds, and selected music loops used by the Godot runtime; source archives are downloaded into the ignored `.runtime` folder. Floor panels use curated 2K ambientCG maps while smaller surfaces stay at 1K.
+Runtime assets live in `assets/kenney`, `assets/quaternius`, `assets/kaykit`, `assets/ambientcg`, and `assets/music`; all copied packs are documented by `assets/manifest/nexus_relay_assets.json`. The repo keeps only the curated 3D modules, skinned operator FBX, GLB/gltf props, PBR textures, sprites, sounds, and selected music loops used by the Godot runtime; source archives are downloaded into the ignored `.runtime` folder. Floor panels use curated 2K ambientCG maps while smaller surfaces stay at 1K.
 
 Refresh the asset set from the repo root with:
 
@@ -30,7 +30,7 @@ Refresh the asset set from the repo root with:
 npm run setup:nexus-relay-assets
 ```
 
-The arena is procedurally seeded from the launch payload's site, cabinet, and session IDs. Generated content includes station module dressing, imported 3D prop placement, PBR floor variants, energy cells, boost gates, extraction anchors, energy supply caches, hazard zones, collision proxies, and sentry movement. Player movement is camera-relative in 3D space with accelerated velocity, imported idle/run animation clips, movement glow, and a close follow camera that stays inside the arena and widens only when P2 joins.
+The arena is procedurally seeded from the launch payload's site, cabinet, and session IDs. Generated content now uses a fixed mission route layered into the seeded arena: ordered power cells, Alpha-to-Omega override terminals, extraction anchors, station module dressing, imported 3D prop placement, PBR floor variants, energy supply caches, hazard zones, collision proxies, and sentry patrols. Player movement is camera-relative in 3D space with accelerated velocity, imported idle/run animation clips, movement glow, and a close follow camera that stays inside the arena and widens only when P2 joins.
 
 The HUD includes a compact objective storyboard and objective toast events. It updates mission instructions for solo versus linked co-op routes without covering the center of the playfield.
 
@@ -40,7 +40,7 @@ The project vendors Glass Brick Scene Manager under `addons/scene_manager` and r
 
 ## Join Flow
 
-P1 is ready by default. P2 can press Enter during the countdown to join, or is included automatically when the Hub launches with a signed-in P2 profile. When the countdown ends, the missions switch to solo or linked co-op rules for that run.
+P1 is ready by default. P2 can press Enter during the countdown to join, or is included automatically when the Hub launches with a signed-in P2 profile. The join screen shows a centered deployment overlay with the countdown, P1/P2 readiness, and whether each joined operator is using Nexus Passport or Guest Mode. When the countdown ends, the missions switch to solo or linked co-op rules for that run.
 
 For production cabinet launch, export the project and set:
 

@@ -8,6 +8,8 @@ Nexus Relay uses a small curated CC0 asset set checked into `games/nexus-relay/a
 - Kenney Animated Characters Protagonists: `https://kenney.nl/assets/animated-characters-protagonists`, Creative Commons CC0. Used for the skinned operator body mesh, Passport body-skin mapping, and idle/run/jump animation playback.
 - Quaternius Universal Animation Library: `https://store.godotengine.org/asset/quaternius/universal-animation-library/`, Creative Commons CC0. Downloaded by setup as a reference retargeting library; the large source GLB remains in `.runtime` instead of the curated runtime folder.
 - Quaternius Ultimate Space Kit: `https://quaternius.com/packs/ultimatespacekit.html`, Creative Commons CC0. Used for flying seekers, pushable cargo, mission pickups, extraction props, and station dressing GLBs.
+- Quaternius Modular Sci-Fi MegaKit Standard: `https://store.godotengine.org/asset/quaternius/modular-sci-fi-megakit/`, Creative Commons CC0. Used for higher-quality maze walls, door frames, terminals, crates, lights, columns, and alien seeker bodies. Curated glTF files are rewritten to reference one shared `textures` folder.
+- KayKit Space Base Bits: `https://godotengine.org/asset-library/asset/2124`, Creative Commons CC0. Used for landing pads, base modules, tunnel pieces, trucks, depots, structures, and other larger silhouettes with explicit collision proxies.
 - ambientCG PBR materials: `https://ambientcg.com/`, Creative Commons CC0. Used for higher-detail metal flooring, panel walls, prop materials, and exosuit surfaces. Floor panels use the curated 2K `MetalPlates006` maps; smaller props continue to use 1K maps to keep file sizes controlled.
 - Tomality Free Music Pack Sampler: `https://store.godotengine.org/asset/tomality/tomality-s-free-music-pack-sampler/`, royalty-free for game use. Two OGG loops are copied into the runtime music folder.
 - Godot AI: `https://store.godotengine.org/asset/dlight/godot-ai/`, MIT license. Installed under `games/nexus-relay/addons/godot_ai` as an optional editor utility, not as gameplay runtime code.
@@ -37,13 +39,13 @@ powershell -ExecutionPolicy Bypass -File scripts/setup-nexus-relay-assets.ps1 -F
 
 Generated content currently includes:
 
-- 3D station floor cells and low-poly prop scatter.
-- Modular space-kit room, corridor, gate, cable, and stair dressing.
+- 3D station floor cells and readable maze lanes.
+- Modular space-kit room, corridor, gate, cable, stair dressing, plus Quaternius/KayKit imported wall, door, terminal, depot, landing-pad, and tunnel pieces.
 - Kenney skinned 3D operator bodies driven by Player Passport body and equipment IDs, plus Quaternius imported 3D seekers, pickups, pushable cargo, and large station props.
 - PBR diamond-plate and metal-panel materials applied to procedural meshes and imported modules.
 - Higher-resolution 2K floor panel maps with subdued normal strength, larger UV scale, and non-emissive seams so tiles read as solid metal panels instead of noisy glowing grids.
-- Static collision proxy volumes for perimeter walls, large station modules, and selected procedural props.
-- Power-cell, security-gate, and extraction-hold anchors.
+- Static collision proxy volumes for perimeter walls, level maze walls, large station modules, imported dressing, and selected procedural props.
+- Ordered power-cell route anchors, Alpha-to-Omega override anchors, and extraction-hold anchors.
 - Supply-cache anchors that reward route awareness and keep low-energy runs recoverable.
 - Hazard zones that drain player energy and team score.
 - Sentry patrol homes, chase steering state, imported model variants, and colors.
@@ -55,10 +57,12 @@ This keeps the mission contract stable while avoiding fixed side-by-side scrolle
 
 Nexus Relay now starts with a join countdown. P1 is ready by default. P2 can join during the countdown by pressing Enter, or P2 is auto-included when the Hub payload contains a signed-in second Player Passport profile.
 
-When the countdown expires, the gameplay route is locked for that run:
+The join screen includes a centered deployment overlay with the countdown, P1/P2 readiness, and Nexus Passport versus Guest Mode status for each slot. When the countdown expires, the gameplay route is locked for that run:
 
 - Solo route: one operator can complete every mission, with fewer seekers, fewer hazards, and one-player extraction-hold rules.
 - Linked route: two operators get extra cells, extra seekers, and an extraction hold that requires every joined player.
+
+The active gameplay route is intentionally ordered. Mission 1 exposes only the current bright amber power cell plus the next hint cell, Mission 2 requires Alpha before Omega, and Mission 3 holds the rescue beacon. Seekers patrol slowly, respect wall collision, and only chase players when static wall checks do not block line of sight.
 
 The result payload reports `mode: "solo"` or `mode: "co-op"` based on the joined player count, not just the cabinet's attract-screen state.
 

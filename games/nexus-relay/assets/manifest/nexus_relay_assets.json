@@ -35,6 +35,30 @@
       ]
     },
     {
+      "name": "Quaternius Modular Sci-Fi MegaKit Standard",
+      "sourcePage": "https://store.godotengine.org/asset/quaternius/modular-sci-fi-megakit/",
+      "downloadUrl": "https://store.godotengine.org/asset/quaternius/modular-sci-fi-megakit/download/143/",
+      "license": "Creative Commons CC0",
+      "localLicense": "res://assets/licenses/quaternius_modular-sci-fi-megakit_LICENSE.txt",
+      "usage": [
+        "higher fidelity station walls and maze barriers",
+        "door frames, terminal props, crates, lights, columns, and imported alien bodies",
+        "shared PBR texture set referenced by curated glTF files"
+      ]
+    },
+    {
+      "name": "KayKit Space Base Bits",
+      "sourcePage": "https://godotengine.org/asset-library/asset/2124",
+      "downloadUrl": "https://github.com/KayKit-Game-Assets/KayKit-Space-Base-Bits-1.0/archive/6dfbcac9927d06283752c4defd4882cfe0d29666.zip",
+      "license": "Creative Commons CC0",
+      "localLicense": "res://assets/licenses/kaykit_space-base-bits_LICENSE.txt",
+      "usage": [
+        "space-base dressing around mission lanes",
+        "landing pads, tunnels, trucks, depot pieces, and solar equipment",
+        "larger silhouette props with explicit collision proxies"
+      ]
+    },
+    {
       "name": "Kenney Modular Space Kit",
       "sourcePage": "https://kenney.nl/assets/modular-space-kit",
       "downloadUrl": "https://opengameart.org/sites/default/files/kenney_modular-space-kit_1.0.zip",
@@ -207,6 +231,72 @@
         "Solar Panel.glb",
         "Roof Radar.glb",
         "Spaceship.glb"
+      ]
+    },
+    "quaterniusMegaKitModels": {
+      "path": "res://assets/quaternius/modular-sci-fi-megakit",
+      "files": [
+        "aliens/Alien_Cyclop.gltf",
+        "aliens/Alien_Oculichrysalis.gltf",
+        "aliens/Alien_Scolitex.gltf",
+        "columns/Column_Astra.gltf",
+        "columns/Column_Large_Straight.gltf",
+        "columns/Column_Pipes.gltf",
+        "columns/Column_Round.gltf",
+        "platforms/Door_DarkMetal.gltf",
+        "platforms/Door_Frame_Square.gltf",
+        "platforms/Door_Frame_Square_Blocked.gltf",
+        "platforms/Door_Metal.gltf",
+        "platforms/Platform_3Plates.gltf",
+        "platforms/Platform_Metal.gltf",
+        "platforms/Platform_Rails_4Wide.gltf",
+        "platforms/Platform_Ramp_4Wide.gltf",
+        "platforms/Platform_Squares.gltf",
+        "props/Prop_AccessPoint.gltf",
+        "props/Prop_Barrel_Large.gltf",
+        "props/Prop_Computer.gltf",
+        "props/Prop_Crate3.gltf",
+        "props/Prop_Crate4.gltf",
+        "props/Prop_Light_Floor.gltf",
+        "props/Prop_Light_Wide.gltf",
+        "props/Prop_Rail_4.gltf",
+        "props/Prop_Vent_Wide.gltf",
+        "walls/ShortWall_MetalPlates_Straight.gltf",
+        "walls/TopWindow_Straight.gltf",
+        "walls/WallAstra_Straight.gltf",
+        "walls/WallAstra_Straight_Divided.gltf",
+        "walls/WallAstra_Straight_Window.gltf",
+        "walls/WallWindow_Straight.gltf",
+        "textures/T_Decals.png",
+        "textures/T_Trim_01_BaseColor_Red.png",
+        "textures/T_Trim_01_Normal.png",
+        "textures/T_Trim_01_ORM.png",
+        "textures/T_Trim_02_BaseColor_Red.png",
+        "textures/T_Trim_02_Normal.png",
+        "textures/T_Trim_02_ORM.png",
+        "textures/T_Trim_03_BaseColor.png",
+        "textures/T_Trim_03_Normal.png",
+        "textures/T_Trim_03_ORM.png"
+      ]
+    },
+    "kayKitSpaceBaseBits": {
+      "path": "res://assets/kaykit/space-base-bits/models",
+      "files": [
+        "basemodule_A.gltf",
+        "basemodule_B.gltf",
+        "basemodule_C.gltf",
+        "cargodepot_A.gltf",
+        "containers_A.gltf",
+        "containers_D.gltf",
+        "landingpad_large.gltf",
+        "lights.gltf",
+        "solarpanel.gltf",
+        "spacetruck.gltf",
+        "spacetruck_large.gltf",
+        "structure_tall.gltf",
+        "tunnel_diagonal_long_A.gltf",
+        "tunnel_straight_A.gltf",
+        "spacebits_texture.png"
       ]
     },
     "animatedCharacters": {

@@ -45,6 +45,8 @@ func _ready() -> void:
 
 func _set_singleton_entities() -> void:
 	singleton_entities = {}
+	if not _current_scene:
+		return
 	var entities = _current_scene.get_tree().get_nodes_in_group(
 		SceneManagerConstants.SINGLETON_GROUP_NAME
 	)
